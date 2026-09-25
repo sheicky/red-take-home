@@ -10,6 +10,9 @@ export interface AirportHit {
   metro?: string;
 }
 
+/** Typed text that is exactly one listed code counts as picked: "sfo" + Check must not be refused. */
+export const exactHit = (text: string, hits: AirportHit[]) => hits.find((h) => h.iata === text.trim().toUpperCase());
+
 /** City or code in, one airport out. Typing a city lists every airport of that metro area. */
 export function AirportField({ label, value, onChange }: { label: string; value: string; onChange: (iata: string) => void }) {
   const id = useId();
@@ -18,6 +21,8 @@ export function AirportField({ label, value, onChange }: { label: string; value:
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const typed = useRef(false);
+  const report = useRef(onChange);
+  useEffect(() => { report.current = onChange; });
 
   useEffect(() => {
     if (!typed.current) setText(value);
@@ -29,7 +34,11 @@ export function AirportField({ label, value, onChange }: { label: string; value:
     const t = setTimeout(() => {
       fetch(`/api/airports?q=${encodeURIComponent(text)}`, { signal: ctl.signal })
         .then((r) => r.json())
-        .then((h: AirportHit[]) => { setHits(h); setActive(0); setOpen(true); })
+        .then((h: AirportHit[]) => {
+          setHits(h); setActive(0); setOpen(true);
+          const exact = exactHit(text, h);
+          if (exact) report.current(exact.iata);
+        })
         .catch(() => {});
     }, 120);
     return () => { clearTimeout(t); ctl.abort(); };
