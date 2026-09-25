@@ -40,7 +40,7 @@ export function Chat({ trip, known }: { trip: { from: string; to: string; date: 
     } catch (err) {
       setTurns(history.slice(0, -1));
       setDraft(q);
-      setError(`${(err as Error).message} Your question is back in the box.`);
+      setError(`${(err as Error).message.replace(/[.\s]*$/, ".")} Your question is back in the box.`);
     } finally {
       setBusy(false);
     }
