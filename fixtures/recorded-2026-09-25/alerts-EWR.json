@@ -1,0 +1,210 @@
+{
+    "@context": [
+        "https://geojson.org/geojson-ld/geojson-context.jsonld",
+        {
+            "@version": "1.1",
+            "wx": "https://api.weather.gov/ontology#",
+            "@vocab": "https://api.weather.gov/ontology#"
+        }
+    ],
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f5cb8aff25803c716998fe7ad961b885c6f232ce.007.2",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f5cb8aff25803c716998fe7ad961b885c6f232ce.007.2",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.f5cb8aff25803c716998fe7ad961b885c6f232ce.007.2",
+                "areaDesc": "Hudson; Eastern Essex; Eastern Union",
+                "geocode": {
+                    "SAME": [
+                        "034017",
+                        "034013",
+                        "034039"
+                    ],
+                    "UGC": [
+                        "NJZ006",
+                        "NJZ106",
+                        "NJZ108"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/NJZ006",
+                    "https://api.weather.gov/zones/forecast/NJZ106",
+                    "https://api.weather.gov/zones/forecast/NJZ108"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.2c81f4a68ca0f135bfa4bc4ed96d16b4c1d11d18.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.2c81f4a68ca0f135bfa4bc4ed96d16b4c1d11d18.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-09-24T21:08:00-04:00"
+                    }
+                ],
+                "sent": "2026-09-25T05:27:00-04:00",
+                "effective": "2026-09-25T05:27:00-04:00",
+                "onset": "2026-09-25T18:00:00-04:00",
+                "expires": "2026-09-25T13:30:00-04:00",
+                "ends": "2026-09-27T18:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Coastal Flood Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Upton NY",
+                "headline": "Coastal Flood Advisory issued September 25 at 5:27AM EDT until September 27 at 6:00PM EDT by NWS Upton NY",
+                "description": "* WHAT...One to two feet of inundation above ground level\nexpected in vulnerable areas near the waterfront and shoreline.\n\n* WHERE...Hudson, Eastern Essex and Eastern Union Counties.\n\n* WHEN...From 6 PM this evening to 6 PM EDT Sunday.\n\n* IMPACTS...Minor to locally flooding in the more vulnerable\nlocations near the waterfront and shoreline. Some roads and low\nlying properties including parking lots, parks, lawns, and homes\nand businesses with basements near the waterfront will\nexperience minor flooding.",
+                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.",
+                "response": "Monitor",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWOKX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS41 KOKX 250927"
+                    ],
+                    "NWSheadline": [
+                        "COASTAL FLOOD ADVISORY NOW IN EFFECT FROM 6 PM THIS EVENING TO 6 PM EDT SUNDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXT.KOKX.CF.Y.0008.260925T2200Z-260927T2200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-09-27T18:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "CFY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.eaa210487b60915c5774b5d28a753aa247f17aad.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.eaa210487b60915c5774b5d28a753aa247f17aad.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.eaa210487b60915c5774b5d28a753aa247f17aad.001.1",
+                "areaDesc": "Northern Fairfield; Northern New Haven; Eastern Passaic; Hudson; Western Bergen; Eastern Bergen; Western Essex; Eastern Essex; Western Union; Eastern Union; Rockland; Northern Westchester",
+                "geocode": {
+                    "SAME": [
+                        "009001",
+                        "009009",
+                        "034031",
+                        "034017",
+                        "034003",
+                        "034013",
+                        "034039",
+                        "036087",
+                        "036119"
+                    ],
+                    "UGC": [
+                        "CTZ005",
+                        "CTZ006",
+                        "NJZ004",
+                        "NJZ006",
+                        "NJZ103",
+                        "NJZ104",
+                        "NJZ105",
+                        "NJZ106",
+                        "NJZ107",
+                        "NJZ108",
+                        "NYZ069",
+                        "NYZ070"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/CTZ005",
+                    "https://api.weather.gov/zones/forecast/CTZ006",
+                    "https://api.weather.gov/zones/forecast/NJZ004",
+                    "https://api.weather.gov/zones/forecast/NJZ006",
+                    "https://api.weather.gov/zones/forecast/NJZ103",
+                    "https://api.weather.gov/zones/forecast/NJZ104",
+                    "https://api.weather.gov/zones/forecast/NJZ105",
+                    "https://api.weather.gov/zones/forecast/NJZ106",
+                    "https://api.weather.gov/zones/forecast/NJZ107",
+                    "https://api.weather.gov/zones/forecast/NJZ108",
+                    "https://api.weather.gov/zones/forecast/NYZ069",
+                    "https://api.weather.gov/zones/forecast/NYZ070"
+                ],
+                "references": [],
+                "sent": "2026-09-25T04:31:00-04:00",
+                "effective": "2026-09-25T04:31:00-04:00",
+                "onset": "2026-09-25T14:00:00-04:00",
+                "expires": "2026-09-25T16:00:00-04:00",
+                "ends": "2026-09-27T06:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Wind Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Upton NY",
+                "headline": "Wind Advisory issued September 25 at 4:31AM EDT until September 27 at 6:00AM EDT by NWS Upton NY",
+                "description": "* WHAT...North winds 20 to 25 mph with gusts up to 55 mph\nexpected.\n\n* WHERE...Portions of southern Connecticut and southeast New\nYork.\n\n* WHEN...From 2 PM Friday to 6 AM EDT Sunday.\n\n* IMPACTS...Gusty winds will blow around unsecured objects. Tree\nlimbs could be blown down and a few power outages may result.",
+                "instruction": "Winds this strong can make driving difficult, especially for high\nprofile vehicles. Use extra caution.\n\nSecure outdoor objects.",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWOKX"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS71 KOKX 250831"
+                    ],
+                    "NWSheadline": [
+                        "WIND ADVISORY IN EFFECT FROM 2 PM FRIDAY TO 6 AM EDT SUNDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXA.KOKX.WI.Y.0003.260925T1800Z-260927T1000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-09-27T06:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "WIY"
+                    ]
+                }
+            }
+        }
+    ],
+    "title": "Current watches, warnings, and advisories for 40.6925 N, 74.1687 W",
+    "updated": "2026-09-25T16:15:49+00:00"
+}

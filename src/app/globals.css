@@ -1,26 +1,58 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --paper: #f3f6f9;
+  --panel: #ffffff;
+  --ink: #14233b;
+  --muted: #56667a;
+  --rule: #d4dce5;
+  --focus: #2563eb;
+  --low: #247a4a;
+  --low-bg: #e4f3ea;
+  --moderate: #9a6412;
+  --moderate-bg: #fbf0da;
+  --high: #c0392b;
+  --high-bg: #fbe5e2;
+  --severe: #a3136a; /* the magenta of LIFR on aviation weather charts */
+  --severe-bg: #f8e1ef;
+  --na: #8a97a8;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #0f1826;
+    --panel: #162235;
+    --ink: #e6edf5;
+    --muted: #9aabbf;
+    --rule: #2a3a52;
+    --focus: #7aa7ff;
+    --low: #5cc98b;
+    --low-bg: #16362a;
+    --moderate: #e9b44c;
+    --moderate-bg: #3a2e14;
+    --high: #ff7a6b;
+    --high-bg: #3d1d1c;
+    --severe: #f07ac0;
+    --severe-bg: #3c1732;
+    --na: #6c7c91;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
 }
+
+html { background: var(--paper); }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.display { font-family: var(--font-display), sans-serif; }

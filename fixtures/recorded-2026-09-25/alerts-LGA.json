@@ -1,0 +1,233 @@
+{
+    "@context": [
+        "https://geojson.org/geojson-ld/geojson-context.jsonld",
+        {
+            "@version": "1.1",
+            "wx": "https://api.weather.gov/ontology#",
+            "@vocab": "https://api.weather.gov/ontology#"
+        }
+    ],
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f5cb8aff25803c716998fe7ad961b885c6f232ce.004.3",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f5cb8aff25803c716998fe7ad961b885c6f232ce.004.3",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.f5cb8aff25803c716998fe7ad961b885c6f232ce.004.3",
+                "areaDesc": "Southern Fairfield; Southern Westchester; Bronx; Northern Queens",
+                "geocode": {
+                    "SAME": [
+                        "009001",
+                        "036119",
+                        "036005",
+                        "036081"
+                    ],
+                    "UGC": [
+                        "CTZ009",
+                        "NYZ071",
+                        "NYZ073",
+                        "NYZ176"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/CTZ009",
+                    "https://api.weather.gov/zones/forecast/NYZ071",
+                    "https://api.weather.gov/zones/forecast/NYZ073",
+                    "https://api.weather.gov/zones/forecast/NYZ176"
+                ],
+                "references": [],
+                "sent": "2026-09-25T05:27:00-04:00",
+                "effective": "2026-09-25T05:27:00-04:00",
+                "onset": "2026-09-25T18:00:00-04:00",
+                "expires": "2026-09-25T13:30:00-04:00",
+                "ends": "2026-09-27T18:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Coastal Flood Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Upton NY",
+                "headline": "Coastal Flood Warning issued September 25 at 5:27AM EDT until September 27 at 6:00PM EDT by NWS Upton NY",
+                "description": "* WHAT...Two to three feet of inundation above ground level\nexpected in vulnerable areas near the waterfront and shoreline.\n\n* WHERE...In Connecticut, Southern Fairfield County. In New\nYork, Southern Westchester, Bronx and Northern Queens Counties.\n\n* WHEN...From 6 PM this evening to 6 PM EDT Sunday.\n\n* IMPACTS...Widespread flooding of vulnerable areas near the\nwaterfront and shoreline, including roads, parking lots, parks,\nlawns, and homes and businesses with basements near the\nwaterfront. Numerous road closures are likely, and vehicles\nparked in vulnerable areas near the waterfront will likely\nbecome flooded. Flooding will also extend inland from the\nwaterfront along tidal rivers and bays.\n\n* ADDITIONAL DETAILS...Moderate flooding will occur over multiple\nhigh tide cycles tonight through Sunday. The worst flooding is\nexpected with the daytime high tide cycles Saturday and Sunday.",
+                "instruction": "Take the necessary actions to protect flood-prone property. If\ntravel is required, do not drive around barricades or through\nwater of unknown depth.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWOKX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS41 KOKX 250927"
+                    ],
+                    "NWSheadline": [
+                        "COASTAL FLOOD WARNING IN EFFECT FROM 6 PM THIS EVENING TO 6 PM EDT SUNDAY... ...COASTAL FLOOD STATEMENT IS CANCELLED"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KOKX.CF.W.0002.260925T2200Z-260927T2200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-09-27T18:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "CFW"
+                    ],
+                    "NationalWeatherService": [
+                        "CFW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.eaa210487b60915c5774b5d28a753aa247f17aad.002.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.eaa210487b60915c5774b5d28a753aa247f17aad.002.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.eaa210487b60915c5774b5d28a753aa247f17aad.002.1",
+                "areaDesc": "Northern Middlesex; Northern New London; Southern Fairfield; Southern New Haven; Southern Middlesex; Southern New London; Southern Westchester; New York (Manhattan); Bronx; Richmond (Staten Is.); Kings (Brooklyn); Northwest Suffolk; Northeast Suffolk; Southwest Suffolk; Southeast Suffolk; Northern Queens; Northern Nassau; Southern Queens; Southern Nassau",
+                "geocode": {
+                    "SAME": [
+                        "009007",
+                        "009011",
+                        "009001",
+                        "009009",
+                        "036119",
+                        "036061",
+                        "036005",
+                        "036085",
+                        "036047",
+                        "036103",
+                        "036081",
+                        "036059"
+                    ],
+                    "UGC": [
+                        "CTZ007",
+                        "CTZ008",
+                        "CTZ009",
+                        "CTZ010",
+                        "CTZ011",
+                        "CTZ012",
+                        "NYZ071",
+                        "NYZ072",
+                        "NYZ073",
+                        "NYZ074",
+                        "NYZ075",
+                        "NYZ078",
+                        "NYZ079",
+                        "NYZ080",
+                        "NYZ081",
+                        "NYZ176",
+                        "NYZ177",
+                        "NYZ178",
+                        "NYZ179"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/CTZ007",
+                    "https://api.weather.gov/zones/forecast/CTZ008",
+                    "https://api.weather.gov/zones/forecast/CTZ009",
+                    "https://api.weather.gov/zones/forecast/CTZ010",
+                    "https://api.weather.gov/zones/forecast/CTZ011",
+                    "https://api.weather.gov/zones/forecast/CTZ012",
+                    "https://api.weather.gov/zones/forecast/NYZ071",
+                    "https://api.weather.gov/zones/forecast/NYZ072",
+                    "https://api.weather.gov/zones/forecast/NYZ073",
+                    "https://api.weather.gov/zones/forecast/NYZ074",
+                    "https://api.weather.gov/zones/forecast/NYZ075",
+                    "https://api.weather.gov/zones/forecast/NYZ078",
+                    "https://api.weather.gov/zones/forecast/NYZ079",
+                    "https://api.weather.gov/zones/forecast/NYZ080",
+                    "https://api.weather.gov/zones/forecast/NYZ081",
+                    "https://api.weather.gov/zones/forecast/NYZ176",
+                    "https://api.weather.gov/zones/forecast/NYZ177",
+                    "https://api.weather.gov/zones/forecast/NYZ178",
+                    "https://api.weather.gov/zones/forecast/NYZ179"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b00c436842fabe265c6c7a83cee5934d6a104ae7.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.b00c436842fabe265c6c7a83cee5934d6a104ae7.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-09-24T14:29:00-04:00"
+                    }
+                ],
+                "sent": "2026-09-25T04:31:00-04:00",
+                "effective": "2026-09-25T04:31:00-04:00",
+                "onset": "2026-09-25T14:00:00-04:00",
+                "expires": "2026-09-25T16:00:00-04:00",
+                "ends": "2026-09-27T06:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Wind Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Upton NY",
+                "headline": "Wind Advisory issued September 25 at 4:31AM EDT until September 27 at 6:00AM EDT by NWS Upton NY",
+                "description": "* WHAT...North winds 20 to 25 mph with gusts up to 55 mph\nexpected.\n\n* WHERE...Portions of southern Connecticut and southeast New\nYork.\n\n* WHEN...From 2 PM Friday to 6 AM EDT Sunday.\n\n* IMPACTS...Gusty winds will blow around unsecured objects. Tree\nlimbs could be blown down and a few power outages may result.",
+                "instruction": "Winds this strong can make driving difficult, especially for high\nprofile vehicles. Use extra caution.\n\nSecure outdoor objects.",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWOKX"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS71 KOKX 250831"
+                    ],
+                    "NWSheadline": [
+                        "WIND ADVISORY IN EFFECT FROM 2 PM FRIDAY TO 6 AM EDT SUNDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KOKX.WI.Y.0003.260925T1800Z-260927T1000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-09-27T06:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "WIY"
+                    ]
+                }
+            }
+        }
+    ],
+    "title": "Current watches, warnings, and advisories for 40.7772 N, 73.8726 W",
+    "updated": "2026-09-25T16:15:49+00:00"
+}

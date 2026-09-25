@@ -1,0 +1,112 @@
+{
+    "@context": [
+        "https://geojson.org/geojson-ld/geojson-context.jsonld",
+        {
+            "@version": "1.1",
+            "wx": "https://api.weather.gov/ontology#",
+            "s": "https://schema.org/",
+            "geo": "http://www.opengis.net/ont/geosparql#",
+            "unit": "http://codes.wmo.int/common/unit/",
+            "@vocab": "https://api.weather.gov/ontology#",
+            "geometry": {
+                "@id": "s:GeoCoordinates",
+                "@type": "geo:wktLiteral"
+            },
+            "city": "s:addressLocality",
+            "state": "s:addressRegion",
+            "distance": {
+                "@id": "s:Distance",
+                "@type": "s:QuantitativeValue"
+            },
+            "bearing": {
+                "@type": "s:QuantitativeValue"
+            },
+            "value": {
+                "@id": "s:value"
+            },
+            "unitCode": {
+                "@id": "s:unitCode",
+                "@type": "@id"
+            },
+            "forecastOffice": {
+                "@type": "@id"
+            },
+            "forecastGridData": {
+                "@type": "@id"
+            },
+            "publicZone": {
+                "@type": "@id"
+            },
+            "county": {
+                "@type": "@id"
+            }
+        }
+    ],
+    "id": "https://api.weather.gov/points/40.6925,-74.1687",
+    "type": "Feature",
+    "geometry": {
+        "type": "Point",
+        "coordinates": [
+            -74.1687,
+            40.6925
+        ]
+    },
+    "properties": {
+        "@id": "https://api.weather.gov/points/40.6925,-74.1687",
+        "@type": "wx:Point",
+        "cwa": "OKX",
+        "type": "land",
+        "forecastOffice": "https://api.weather.gov/offices/OKX",
+        "gridId": "OKX",
+        "gridX": 28,
+        "gridY": 40,
+        "forecast": "https://api.weather.gov/gridpoints/OKX/28,40/forecast",
+        "forecastHourly": "https://api.weather.gov/gridpoints/OKX/28,40/forecast/hourly",
+        "forecastGridData": "https://api.weather.gov/gridpoints/OKX/28,40",
+        "observationStations": "https://api.weather.gov/gridpoints/OKX/28,40/stations",
+        "relativeLocation": {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -74.1725735,
+                    40.7242204
+                ]
+            },
+            "properties": {
+                "city": "Newark",
+                "state": "NJ",
+                "distance": {
+                    "unitCode": "wmoUnit:m",
+                    "value": 0
+                },
+                "bearing": {
+                    "unitCode": "wmoUnit:degree_(angle)",
+                    "value": 0
+                }
+            }
+        },
+        "forecastZone": "https://api.weather.gov/zones/forecast/NJZ106",
+        "county": "https://api.weather.gov/zones/county/NJC013",
+        "fireWeatherZone": "https://api.weather.gov/zones/fire/NJZ106",
+        "timeZone": "America/New_York",
+        "radarStation": "KDIX",
+        "astronomicalData": {
+            "sunrise": "2026-09-24T06:46:24-04:00",
+            "sunset": "2026-09-24T18:50:48-04:00",
+            "transit": "2026-09-24T12:48:36-04:00",
+            "civilTwilightBegin": "2026-09-24T06:19:12-04:00",
+            "civilTwilightEnd": "2026-09-24T19:18:00-04:00",
+            "nauticalTwilightBegin": "2026-09-24T05:47:18-04:00",
+            "nauticalTwilightEnd": "2026-09-24T19:49:54-04:00",
+            "astronomicalTwilightBegin": "2026-09-24T05:14:53-04:00",
+            "astronomicalTwilightEnd": "2026-09-24T20:22:20-04:00"
+        },
+        "nwr": {
+            "transmitter": "KWO35",
+            "sameCode": "034013",
+            "areaBroadcast": "https://api.weather.gov/radio/KWO35/broadcast",
+            "pointBroadcast": "https://api.weather.gov/points/40.6925,-74.1687/radio"
+        }
+    }
+}
