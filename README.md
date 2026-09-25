@@ -27,6 +27,49 @@ The model only sees what the rules produced. It must cite the evidence it uses, 
 
 Without a key, everything else still works and the page says the AI parts are off.
 
+## System design
+
+```mermaid
+flowchart TB
+  user(["Ops agent in the browser"])
+
+  subgraph server ["Next.js server"]
+    direction LR
+    page["Page and assess API"]
+    chat["Chat API"]
+    rules["Rules engine<br/>decides the level"]
+    writer["Message writer<br/>checks JSON, citations, level"]
+  end
+
+  subgraph data ["Public data, fetched live, cached 5 min per trip"]
+    direction LR
+    faa["FAA<br/>airport status"]
+    awc["Airport forecasts<br/>TAF and METAR"]
+    nws["Weather service<br/>forecast and alerts"]
+    bts[("On-time history<br/>bundled")]
+  end
+
+  llm["OpenRouter<br/>Gemma 4 31B"]
+
+  user -->|route and date| page
+  user -->|question| chat
+  page --> rules
+  rules -->|reads| data
+  page -->|assessment| writer
+  writer -->|draft, one retry| llm
+  chat -->|assessment and question| llm
+```
+
+A check goes like this:
+
+1. The route and date go into the URL, so any check can be shared as a link.
+2. The server fetches the live sources in parallel and caches the result for 5 minutes, so the page, the API and the chat all see the same data.
+3. The rules turn that data into a level, the evidence behind it and a checklist. The page shows this right away and doesn't wait for the AI.
+4. The model receives the rules' output, never the raw feeds, and writes the traveler message. The checker rejects any draft that breaks the rules, with one retry.
+5. The chat sends the same assessment plus the question, and the answer streams back.
+
+Delivery follows the same idea: every push to `main` runs the checks in GitHub Actions, builds the Docker image and publishes it to the GitHub Container Registry.
+
 ## Run it
 
 You need [Bun](https://bun.sh) 1.3 and an OpenRouter key (free at [openrouter.ai/keys](https://openrouter.ai/keys)).
