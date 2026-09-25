@@ -17,15 +17,20 @@ bun run dev        # or: npm run dev   → http://localhost:3000
 No key is needed. Every data source is free and keyless; the optional keys in `.env.example`
 add an LLM-written briefing (OpenAI) and same-day live flight status (aviationstack).
 
+The result reads as a route. Each airport's problems sit under its code as tiles: the cause, the
+number that matters, and the source; open a tile for the full sentence and its evidence. Nearby
+airports appear as chips, and the actions are a checklist. The trip lives in the URL, so a check
+can be shared. The page streams: a skeleton carrying the airport codes shows while the sources answer.
+
 ---
 
 ## Demo in three runs
 
-The **Data** selector under the form has three positions.
+The **Data** selector above the form has three positions.
 
 | Run | What it shows |
 |---|---|
-| **Replay 25 Sep** (JFK → SFO, DL 679) | Real FAA, TAF, METAR and NWS responses captured that afternoon and replayed byte for byte, with the clock frozen at capture time. The recording contains a ground delay program at SFO (low ceilings), another at LGA (wind, avg 1 h 54) and a wind advisory over New York. With DL 679 the verdict is **Moderate**. Clear the flight number and it becomes **High**, because the 37–38 kt gusts arrive at JFK after 19:00 and DL 679 usually leaves at 14:55. adsbdb claims DAL679 flies ATL→SEA; BTS shows 704 flights on JFK→SFO, so adsbdb's claim is shown but not counted. Also look at *Other airports*. |
+| **Replay 25 Sep** (JFK → SFO, DL 679) | Real FAA, TAF, METAR and NWS responses captured that afternoon and replayed byte for byte, with the clock frozen at capture time. The recording contains a ground delay program at SFO (low ceilings), another at LGA (wind, avg 1 h 54) and a wind advisory over New York. With DL 679 the verdict is **Moderate**. Clear the flight number and it becomes **High**, because the 37–38 kt gusts arrive at JFK after 19:00 and DL 679 usually leaves at 14:55. adsbdb claims DAL679 flies ATL→SEA; BTS shows 704 flights on JFK→SFO, so adsbdb's claim is shown but not counted. Also look at the *Nearby* airports under each code. |
 | **Blizzard (invented)** (BOS → ORD) | **Invented data**, labelled as such. Exercises the **Severe** path: ground stop at ORD, blizzard warning. |
 | **Live** | Whatever is true right now. Try tomorrow, then a date three weeks out: the confidence and the sources change, and the verdict becomes "Too early" instead of a misleading "Low". |
 
