@@ -3,10 +3,10 @@
 A working prototype for an Operations team whose employees fly across the United States.
 Enter a route and a date (and, if you have it, a flight number). You get:
 
-- **a verdict** — Low / Moderate / High / Severe, with a stated confidence;
-- **the evidence** — every fact that moved the verdict, linked to its source, plus the facts
+- **a verdict**: Low / Moderate / High / Severe, with a stated confidence;
+- **the evidence**: every fact that moved the verdict, linked to its source, plus the facts
   that were looked at and deliberately *not* counted, with the reason;
-- **what to do** — concrete actions for the Ops agent, most urgent first, including a
+- **what to do**: concrete actions for the Ops agent, most urgent first, including a
   same-metro alternate airport when one is clearly better.
 
 ```bash
@@ -25,11 +25,11 @@ The **Data** selector under the form has three positions.
 
 | Run | What it shows |
 |---|---|
-| **Recorded — 25 Sep 2026, JFK → SFO, DL 679** | Real FAA, TAF, METAR and NWS responses captured that afternoon and replayed byte for byte, with the clock frozen at capture time. The recording contains a ground delay program at SFO (low ceilings), another at LGA (wind, avg 1 h 54) and a wind advisory over New York. With DL 679 the verdict is **Moderate**. Clear the flight number and it becomes **High**, because the 37–38 kt gusts arrive at JFK after 19:00 and DL 679 usually leaves at 14:55. adsbdb claims DAL679 flies ATL→SEA; BTS shows 704 flights on JFK→SFO, so adsbdb's claim is shown but not counted. Also look at *Other airports in the same area*. |
-| **Synthetic — Chicago blizzard** | **Invented data**, labelled as such. Exercises the **Severe** path: ground stop at ORD, blizzard warning. |
-| **Live** | Whatever is true right now. Try tomorrow, then a date three weeks out — the confidence and the sources table change, and the verdict becomes "Nothing known yet" instead of a misleading "Low". |
+| **Replay 25 Sep** (JFK → SFO, DL 679) | Real FAA, TAF, METAR and NWS responses captured that afternoon and replayed byte for byte, with the clock frozen at capture time. The recording contains a ground delay program at SFO (low ceilings), another at LGA (wind, avg 1 h 54) and a wind advisory over New York. With DL 679 the verdict is **Moderate**. Clear the flight number and it becomes **High**, because the 37–38 kt gusts arrive at JFK after 19:00 and DL 679 usually leaves at 14:55. adsbdb claims DAL679 flies ATL→SEA; BTS shows 704 flights on JFK→SFO, so adsbdb's claim is shown but not counted. Also look at *Other airports*. |
+| **Blizzard (invented)** (BOS → ORD) | **Invented data**, labelled as such. Exercises the **Severe** path: ground stop at ORD, blizzard warning. |
+| **Live** | Whatever is true right now. Try tomorrow, then a date three weeks out: the confidence and the sources change, and the verdict becomes "Too early" instead of a misleading "Low". |
 
-Recorded and synthetic runs exist because a demo on a calm day is a wall of green that proves nothing.
+Recorded and synthetic runs exist because a demo on a calm day is a wall of "Low" that proves nothing.
 
 ---
 
@@ -37,23 +37,23 @@ Recorded and synthetic runs exist because a demo on a calm day is a wall of gree
 
 | Source | What it gives | Reaches | Key |
 |---|---|---|---|
-| **FAA NAS Status** (`nasstatus.faa.gov/api/airport-status-information`) | Ground stops, ground delay programs, airport-wide delays, closures | **Today only** — it's a snapshot of now | none |
+| **FAA NAS Status** (`nasstatus.faa.gov/api/airport-status-information`) | Ground stops, ground delay programs, airport-wide delays, closures | **Today only**: it's a snapshot of now | none |
 | **TAF** (aviationweather.gov) | Airport forecast in aviation terms: ceiling, visibility, wind, gusts, wind shear | 24–30 h | none |
 | **METAR** (aviationweather.gov) | What the airport observes now | Now | none |
 | **NWS forecast** (api.weather.gov) | 7-day forecast periods for the airport's grid point | ~7 days | none (needs a User-Agent) |
 | **NWS active alerts** | Winter storm / wind / fog warnings and advisories | Whatever is issued now, filtered by each alert's own window | none |
-| **BTS On-Time Performance** | 24 months of every U.S. domestic flight: on-time and cancellation rates by route × month and by flight number, and each flight's usual schedule | Any date (history) | none — pre-processed, bundled |
+| **BTS On-Time Performance** | 24 months of every U.S. domestic flight: on-time and cancellation rates by route × month and by flight number, and each flight's usual schedule | Any date (history) | none, pre-processed, bundled |
 | **adsbdb** | The route currently filed for a callsign | — | none |
 | **aviationstack** *(optional)* | Live status for a flight today | Today | free tier, ~100 req/month |
 
 The date decides which sources are consulted. **A source that cannot speak about that date is
-marked *Not applicable* with the reason, never silently skipped** — and the confidence drops
+marked *Not applicable* with the reason, never silently skipped**, and the confidence drops
 with each day of horizon:
 
 | Days ahead | Sources | Confidence |
 |---|---|---|
 | 0 (today) | all | high |
-| 1 (tomorrow) | TAF, NWS, alerts, history — **not FAA** | high |
+| 1 (tomorrow) | TAF, NWS, alerts, history, **not FAA** | high |
 | 2–7 | NWS, alerts, history | medium → low |
 | 8+ | history only, with the dates to re-check | very low |
 
@@ -69,7 +69,7 @@ request ─► resolve airports (+ flight number) ─► horizon: which sources 
         ─► fetch all applicable sources in parallel (each may fail independently)
         ─► deterministic rules ─► evidence + factors
         ─► verdict = the most serious factor ─► confidence ─► actions
-        ─► briefing text (LLM, checked — or template)
+        ─► briefing text (LLM, checked, or template)
 ```
 
 Decisions worth defending:
@@ -78,7 +78,7 @@ Decisions worth defending:
 2. **The verdict is the maximum factor, not a sum.** The TAF, the NWS forecast and an NWS alert
    often describe the same storm. Adding them would count it three times.
 3. **History is a prior, capped at Moderate.** "32% of these flights arrive late in December" can
-   turn a quiet day amber, never red. It says nothing about *this* day.
+   turn a quiet day Moderate, never High. It says nothing about *this* day.
 4. **Where an FAA program sits matters.** A ground delay program at the *destination* holds your
    flight at the gate before departure: a direct hit. The same program at the *origin* meters
    arrivals into your departure airport, so its effect on you is a knock-on delay, one level lower.
@@ -113,9 +113,9 @@ A PROB30/40 group in a TAF counts one level lower; a "slight chance" in the NWS 
 
 These came from reading actual responses, not from documentation:
 
-- **The FAA listed LAX and SAN as "Airport Closures"** — NOTAMs closing them to *non-scheduled
+- **The FAA listed LAX and SAN as "Airport Closures"**: NOTAMs closing them to *non-scheduled
   general aviation* only. Airline flights were unaffected. A naive parser reports "LAX closed".
-  They are shown under *Looked at, not counted*.
+  They are shown under *Evidence > Not counted*.
 - **The FAA "Reopen" date has no year.** LAX said "May 28 at 16:00 UTC". Guessing the nearest
   year makes it look over. The NOTAM text itself says `2605271826-2705281600`, so it actually runs to
   **May 2027**. The parser reads the NOTAM range first.
@@ -149,14 +149,14 @@ Every threshold and rule was chosen deliberately and is covered by a test. Two t
 **mutation-checked**: the rule was broken on purpose to confirm the test goes red. One wasn't, so a test was added.
 
 **In the product: one narrow job.** The rules produce the level, the factors, the evidence and
-candidate actions. The LLM receives *that* — never the raw feeds — and writes a two-part briefing
+candidate actions. The LLM receives *that*, never the raw feeds, and writes a two-part briefing
 an Ops agent can paste to a traveler. A guard then checks the draft and throws it away if it:
 - cites evidence that doesn't exist;
 - states a different risk level;
 - tells the agent to do nothing about a High/Severe risk;
 - is malformed or too long.
 
-When a draft is discarded, the deterministic template is shown **with the reason**.
+When a draft is discarded, the page keeps the rule-based actions and **states the reason**.
 With no key, or on a timeout or API error, the tool uses the template, and it keeps working.
 
 Why not let the model decide? Because an Ops verdict has to be reproducible, explainable
