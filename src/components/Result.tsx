@@ -1,245 +1,214 @@
 "use client";
 
-import type { Assessment, Evidence, Factor, Level, SourceState } from "@/lib/types";
+import type { Assessment, Evidence, Factor, Level as LevelT, SourceState } from "@/lib/types";
 
-const LEVEL_WORD: Record<Level, string> = { LOW: "Low", MODERATE: "Moderate", HIGH: "High", SEVERE: "Severe" };
-const CONF_WORD = { HIGH: "high", MEDIUM: "medium", LOW: "low", VERY_LOW: "very low" } as const;
-const RANK: Record<Level, number> = { LOW: 0, MODERATE: 1, HIGH: 2, SEVERE: 3 };
-const tone = (l: Level) => l.toLowerCase();
+const WORD: Record<LevelT, string> = { LOW: "Low", MODERATE: "Moderate", HIGH: "High", SEVERE: "Severe" };
+const CONF = { HIGH: "High confidence", MEDIUM: "Medium confidence", LOW: "Low confidence", VERY_LOW: "Very low confidence" } as const;
+const RANK: Record<LevelT, number> = { LOW: 0, MODERATE: 1, HIGH: 2, SEVERE: 3 };
+const INK: Record<LevelT, string> = { LOW: "var(--noir)", MODERATE: "var(--noir)", HIGH: "var(--noir)", SEVERE: "var(--creme)" };
 
-function Pill({ level, big = false }: { level: Level; big?: boolean }) {
+/** The risk stamp. A filled block, not a pill: pills are for things you press. */
+function Level({ l, big = false }: { l: LevelT; big?: boolean }) {
   return (
     <span
-      className={`display inline-block rounded font-semibold ${big ? "text-2xl px-3 py-0.5" : "text-[15px] px-2 leading-6"}`}
-      style={{ color: `var(--${tone(level)})`, background: `var(--${tone(level)}-bg)` }}
+      className={`display inline-flex items-center rounded-md font-bold leading-none ${big ? "text-[28px] px-4 h-12" : "text-[14px] px-2 h-6"}`}
+      style={{ background: `var(--${l.toLowerCase()})`, color: INK[l], boxShadow: l === "LOW" ? "inset 0 0 0 1.5px var(--noir)" : undefined }}
     >
-      {LEVEL_WORD[level]}
+      {WORD[l]}
     </span>
   );
 }
 
-/** "[E3]" in LLM or template text becomes a link to that piece of evidence. */
+/** "[E3]" or "[E3, E4]" in rule or LLM text becomes quiet links to the evidence. */
 function Cited({ text }: { text: string }) {
-  const parts = text.split(/(\[E\d+(?:,\s*E\d+)*\])/g);
   return (
     <>
-      {parts.map((p, i) => {
-        const ids = /^\[(E\d+(?:,\s*E\d+)*)\]$/.exec(p)?.[1].split(/,\s*/);
+      {text.split(/(\s?\[E\d+(?:,\s*E\d+)*\])/g).map((p, i) => {
+        const ids = /^\s?\[(E\d+(?:,\s*E\d+)*)\]$/.exec(p)?.[1].split(/,\s*/);
         if (!ids) return <span key={i}>{p}</span>;
         return (
-          <sup key={i} className="whitespace-nowrap">
+          <span key={i} className="whitespace-nowrap">
             {ids.map((id) => (
-              <a key={id} href={`#${id}`} className="ml-0.5 text-[11px] font-semibold text-[var(--focus)] hover:underline">{id}</a>
+              <a key={id} href={`#${id}`} className="ml-1.5 text-[12px] text-[var(--gris)] underline hover:text-[var(--noir)]">{id}</a>
             ))}
-          </sup>
+          </span>
         );
       })}
     </>
   );
 }
 
-const sideLevel = (factors: Factor[], side: Factor["side"][]) =>
-  factors.filter((f) => side.includes(f.side)).reduce<Level>((l, f) => (RANK[f.level] > RANK[l] ? f.level : l), "LOW");
+const worst = (fs: Factor[]) => fs.reduce<LevelT>((l, f) => (RANK[f.level] > RANK[l] ? f.level : l), "LOW");
+const hhmm = (iso: string, tz: string) => new Date(iso).toLocaleTimeString("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
+const when = (s?: string) => {
+  const d = s ? new Date(s) : null;
+  return d && !Number.isNaN(d.getTime())
+    ? d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC"
+    : s;
+};
 
-const localTime = (iso: string, tz: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false });
-
-function TripStrip({ a }: { a: Assessment }) {
+function Strip({ a }: { a: Assessment }) {
   const [ow, dw] = a.windows;
-  const o = sideLevel(a.factors, ["origin"]);
-  const d = sideLevel(a.factors, ["destination"]);
-  const mid = sideLevel(a.factors, ["route", "flight"]);
-  const end = (code: string, name: string, lv: Level, w: typeof ow, tz: string, align: string) => (
-    <div className={`min-w-0 ${align}`}>
-      <div className="display font-semibold leading-none tracking-tight text-[64px] sm:text-[88px]">{code}</div>
-      <div className="h-1.5 rounded-full mt-2" style={{ background: `var(--${tone(lv)})` }} aria-hidden />
-      <div className="mt-2 text-[13px] text-[var(--muted)] truncate">{name}</div>
-      <div className="text-[13px]">
-        {w.basis === "scheduled-time" ? "Scheduled window " : "Whole day "}
-        {localTime(w.from, tz)}–{localTime(w.to, tz)} local
-      </div>
+  const side = (code: string, name: string, l: LevelT, time: string | undefined, right = false) => (
+    <div className={`min-w-0 ${right ? "text-right" : ""}`}>
+      <div className="display font-bold leading-[0.85] text-[64px] sm:text-[96px]">{code}</div>
+      <div className="mt-3 h-1.5 rounded-full" style={{ background: l === "LOW" ? "var(--noir)" : `var(--${l.toLowerCase()})`, opacity: l === "LOW" ? 0.15 : 1 }} aria-hidden />
+      <div className="mt-2 text-[14px] text-[var(--gris)] truncate hidden sm:block">{name}</div>
+      {time && <div className="text-[15px] font-medium">{time}</div>}
     </div>
   );
+  const sched = ow.basis === "scheduled-time";
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3 sm:gap-6">
-      {end(a.origin.iata, a.origin.name, o, ow, a.origin.tz, "")}
-      <div className="pt-7 sm:pt-10 text-center min-w-[88px]">
-        <div className="h-0.5 w-full rounded-full" style={{ background: `var(--${tone(mid)})` }} aria-hidden />
-        <div className="mt-2 text-[13px] font-semibold">{a.request.date}</div>
-        <div className="text-[13px] text-[var(--muted)]">
-          {a.horizon.daysAhead === 0 ? "today" : a.horizon.daysAhead === 1 ? "tomorrow" : `in ${a.horizon.daysAhead} days`}
-        </div>
-        {a.flight && <div className="text-[13px] font-semibold mt-1">{a.flight.normalized}</div>}
+    <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-4 sm:gap-8">
+      {side(a.origin.iata, a.origin.name, worst(a.factors.filter((f) => f.side === "origin")), sched && a.flight?.scheduledDeparture ? `Dep ${a.flight.scheduledDeparture}` : undefined)}
+      <div className="pt-6 sm:pt-10 text-center text-[14px] leading-tight">
+        <div className="font-semibold">{new Date(a.request.date + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}</div>
+        <div className="text-[var(--gris)]">{a.horizon.daysAhead === 0 ? "today" : a.horizon.daysAhead === 1 ? "tomorrow" : `in ${a.horizon.daysAhead} days`}</div>
+        {a.flight && <div className="mt-1 font-semibold">{a.flight.normalized}</div>}
       </div>
-      {end(a.destination.iata, a.destination.name, d, dw, a.destination.tz, "text-right")}
+      {side(a.destination.iata, a.destination.name, worst(a.factors.filter((f) => f.side === "destination")), sched && a.flight?.scheduledArrival ? `Arr ${a.flight.scheduledArrival}` : undefined, true)}
+      {!sched && <span className="sr-only">Weather read for the whole day, {hhmm(ow.from, a.origin.tz)} to {hhmm(dw.to, a.destination.tz)}</span>}
     </div>
   );
 }
 
-function EvidenceItem({ e }: { e: Evidence }) {
+const Rows = ({ children }: { children: React.ReactNode }) => <ul className="border-t-[1.5px] border-[var(--noir)]">{children}</ul>;
+const Row = ({ children, id }: { children: React.ReactNode; id?: string }) => (
+  <li id={id} className="scroll-mt-6 py-3.5 border-b border-[var(--filet)] target:bg-white">{children}</li>
+);
+const H2 = ({ children }: { children: React.ReactNode }) => <h2 className="text-[26px] font-bold mb-3">{children}</h2>;
+
+function EvidenceRow({ e }: { e: Evidence }) {
   return (
-    <li id={e.id} className="scroll-mt-6 py-3 border-t border-[var(--rule)] target:bg-[var(--paper)]">
-      <div className="flex gap-3">
-        <span className="text-[12px] font-semibold text-[var(--muted)] w-7 shrink-0 pt-0.5">{e.id}</span>
-        <div className="min-w-0">
+    <Row id={e.id}>
+      <div className="flex gap-4">
+        <span className="text-[13px] text-[var(--gris)] w-7 shrink-0 pt-0.5">{e.id}</span>
+        <div className="min-w-0 text-[15px]">
           <div className="font-semibold">{e.title}</div>
-          <div className="text-[14px] break-words">{e.detail}</div>
-          {e.ignoredBecause && <div className="text-[13px] mt-1 text-[var(--muted)]">Not counted: {e.ignoredBecause}.</div>}
-          <div className="text-[12px] text-[var(--muted)] mt-1">
-            {e.source}{e.airport ? `, ${e.airport}` : ""}{e.observedAt ? `, as of ${e.observedAt}` : ""}{" "}
-            <a href={e.url} target="_blank" rel="noreferrer" className="text-[var(--focus)] hover:underline">open source</a>
+          <div className="break-words text-[var(--gris)]">{e.detail}</div>
+          {e.ignoredBecause && <div className="mt-1">Not counted: {e.ignoredBecause}.</div>}
+          <div className="mt-1 text-[13px] text-[var(--gris)]">
+            {e.observedAt ? `${when(e.observedAt)}, ` : ""}
+            <a href={e.url} target="_blank" rel="noreferrer" className="underline hover:text-[var(--noir)]">source</a>
           </div>
         </div>
       </div>
-    </li>
+    </Row>
   );
 }
 
-const STATE_LABEL: Record<SourceState, string> = { ok: "Used", error: "Failed", "not-applicable": "Not applicable", "no-data": "No data", disabled: "Off" };
+const STATE: Record<SourceState, string> = { ok: "Used", error: "Failed", "not-applicable": "Not for this date", "no-data": "No data", disabled: "Off" };
 
 export function Result({ a }: { a: Assessment }) {
   const counted = a.evidence.filter((e) => !e.ignoredBecause);
-  const tooEarly = a.confidence.level === "VERY_LOW" && a.factors.length === 0;
   const ignored = a.evidence.filter((e) => e.ignoredBecause);
-  const factorsBy = (sides: Factor["side"][]) => a.factors.filter((f) => sides.includes(f.side)).sort((x, y) => RANK[y.level] - RANK[x.level]);
-  const columns: [string, Factor[]][] = [
-    [a.origin.iata, factorsBy(["origin"])],
-    ["Route & flight", factorsBy(["route", "flight"])],
-    [a.destination.iata, factorsBy(["destination"])],
-  ];
+  const tooEarly = a.confidence.level === "VERY_LOW" && a.factors.length === 0;
+  const factors = [...a.factors].sort((x, y) => RANK[y.level] - RANK[x.level]);
+  const where = (f: Factor) => f.airport ?? (f.side === "flight" ? a.flight?.normalized ?? "Flight" : "Route");
+  const summary = "cursor-pointer select-none list-none text-[18px] font-semibold py-3.5 border-b border-[var(--filet)] flex justify-between [&::-webkit-details-marker]:hidden";
 
   return (
-    <article className="space-y-8">
-      {a.scenario && (
-        <div className="rounded-md border px-4 py-3 text-[14px]" style={{ borderColor: a.scenario.synthetic ? "var(--severe)" : "var(--rule)", background: "var(--panel)" }}>
-          <strong>{a.scenario.synthetic ? "Invented data. " : "Replayed data. "}</strong>
-          {a.scenario.label}.{" "}
-          {a.scenario.synthetic ? "Nothing here happened; it exists to show how a severe day reads." : `Real responses captured at ${a.scenario.recordedAt}; the clock is frozen at that moment.`}
-        </div>
-      )}
-
-      <section aria-label="Verdict" className="rounded-lg bg-[var(--panel)] border border-[var(--rule)] p-5 sm:p-7">
-        <TripStrip a={a} />
-        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
-          {tooEarly ? (
-            // "Low" with no live source is an absence of evidence, not evidence of absence.
-            <span className="display inline-block rounded font-semibold text-2xl px-3 py-0.5 border border-[var(--rule)] text-[var(--muted)]">Nothing known yet</span>
-          ) : (
-            <Pill level={a.level} big />
-          )}
-          <span className="text-[15px]">
-            {tooEarly ? "no live source reaches this date; history shows nothing unusual" : <>disruption risk, <strong>{CONF_WORD[a.confidence.level]}</strong> confidence</>}
-          </span>
-        </div>
-        <ul className="mt-2 text-[13px] text-[var(--muted)] list-disc pl-5">
-          {a.confidence.reasons.map((r) => <li key={r}>{r}</li>)}
-        </ul>
-        {a.adjustments.length > 0 && (
-          <div className="mt-4 text-[14px] border-l-4 pl-3" style={{ borderColor: "var(--moderate)" }}>
-            {a.adjustments.map((x) => <p key={x}>{x}</p>)}
-          </div>
-        )}
-      </section>
-
-      <section aria-labelledby="brief" className="grid gap-6 md:grid-cols-[3fr_2fr]">
-        <div>
-          <h2 id="brief" className="display text-2xl font-semibold">Briefing for the traveler&apos;s file</h2>
-          <p className="mt-2 max-w-[68ch]"><Cited text={a.narrative.summary} /></p>
-          <p className="mt-3 max-w-[68ch]"><strong>Do: </strong><Cited text={a.narrative.action} /></p>
-          <p className="mt-3 text-[12px] text-[var(--muted)] max-w-[68ch]">
-            {a.narrative.by === "llm"
-              ? `Written by ${a.narrative.model} from the evidence below, then checked: every citation exists and the risk level matches the rules. The model does not set the level.`
-              : "Written from a template (no LLM used)."}
-            {a.narrative.rejectedReason && ` ${a.narrative.rejectedReason}.`}
+    <article className="space-y-12">
+      <section aria-label="Verdict">
+        {a.scenario && (
+          <p className="mb-5 text-[14px] font-medium" style={{ color: a.scenario.synthetic ? "var(--severe)" : "var(--gris)" }}>
+            {a.scenario.synthetic ? "Invented data" : a.scenario.label}
           </p>
+        )}
+        <Strip a={a} />
+        <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2">
+          {tooEarly ? (
+            <span className="display inline-flex items-center rounded-md text-[28px] font-bold px-4 h-12" style={{ boxShadow: "inset 0 0 0 1.5px var(--noir)" }}>Too early</span>
+          ) : (
+            <Level l={a.level} big />
+          )}
+          <span className="text-[var(--gris)]">{tooEarly ? "History only" : CONF[a.confidence.level]}</span>
         </div>
-        <div>
-          <h2 className="display text-2xl font-semibold">Actions, most urgent first</h2>
-          <ol className="mt-2 list-decimal pl-5 space-y-1.5 text-[14px]">
-            {a.actions.map((x) => <li key={x}>{x}</li>)}
-          </ol>
-        </div>
+        {a.adjustments.map((x) => <p key={x} className="mt-3 text-[15px] max-w-[68ch]">{x}</p>)}
       </section>
 
-      <section aria-labelledby="why">
-        <h2 id="why" className="display text-2xl font-semibold">Why this level</h2>
-        <p className="text-[13px] text-[var(--muted)] max-w-[68ch]">The verdict is the most serious single factor, never a sum: two sources describing the same storm must not count twice.</p>
-        <div className="mt-3 grid gap-4 md:grid-cols-3">
-          {columns.map(([title, fs]) => (
-            <div key={title} className="rounded-lg border border-[var(--rule)] bg-[var(--panel)] p-4">
-              <h3 className="display text-xl font-semibold">{title}</h3>
-              {fs.length === 0 ? (
-                <p className="text-[14px] text-[var(--muted)] mt-1">Nothing found.</p>
-              ) : (
-                <ul className="mt-2 space-y-3">
-                  {fs.map((f) => (
-                    <li key={f.id} className="text-[14px]">
-                      <Pill level={f.level} /> <Cited text={`${f.summary} [${f.evidence.join(", ")}]`} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+      <section aria-labelledby="do">
+        <H2><span id="do">Do</span></H2>
+        <Rows>
+          {a.actions.map((x, i) => (
+            <Row key={x}><span className={i === 0 ? "font-semibold" : ""}>{x}</span></Row>
           ))}
-        </div>
+        </Rows>
       </section>
 
-      {a.alternates.length > 0 && (
-        <section aria-labelledby="alts">
-          <h2 id="alts" className="display text-2xl font-semibold">Other airports in the same area</h2>
-          <div className="mt-2 overflow-x-auto">
-            <table className="w-full text-[14px] border-collapse min-w-[520px]">
-              <thead>
-                <tr className="text-left text-[13px] text-[var(--muted)]">
-                  <th className="py-2 pr-3 font-semibold">Airport</th>
-                  <th className="py-2 pr-3 font-semibold">Instead of</th>
-                  <th className="py-2 pr-3 font-semibold">Level</th>
-                  <th className="py-2 pr-3 font-semibold">On time historically</th>
-                  <th className="py-2 font-semibold">What we see</th>
-                </tr>
-              </thead>
-              <tbody>
-                {a.alternates.map((x) => (
-                  <tr key={x.airport} className="border-t border-[var(--rule)] align-top">
-                    <td className="py-2 pr-3"><span className="display text-lg font-semibold">{x.airport}</span> <span className="text-[var(--muted)]">{x.name}</span></td>
-                    <td className="py-2 pr-3">{x.side === "origin" ? a.origin.iata : a.destination.iata}</td>
-                    <td className="py-2 pr-3"><Pill level={x.level} /></td>
-                    <td className="py-2 pr-3">{x.routeOnTime !== undefined ? `${Math.round(x.routeOnTime * 100)}%` : "no nonstop"}</td>
-                    <td className="py-2">{x.reasons.join(" ")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {factors.length > 0 && (
+        <section aria-labelledby="why">
+          <H2><span id="why">Why</span></H2>
+          <Rows>
+            {factors.map((f) => (
+              <Row key={f.id}>
+                <div className="grid grid-cols-[3.5rem_1fr_auto] sm:grid-cols-[5rem_1fr_auto] gap-3 items-baseline">
+                  <span className="display text-[18px] font-bold">{where(f)}</span>
+                  <span className="text-[15px] min-w-0"><Cited text={`${f.summary} [${f.evidence.join(", ")}]`} /></span>
+                  <Level l={f.level} />
+                </div>
+              </Row>
+            ))}
+          </Rows>
         </section>
       )}
 
-      <section aria-labelledby="evidence">
-        <h2 id="evidence" className="display text-2xl font-semibold">Evidence</h2>
-        <ul className="mt-2">{counted.map((e) => <EvidenceItem key={e.id} e={e} />)}</ul>
-        {ignored.length > 0 && (
-          <details className="mt-3">
-            <summary className="cursor-pointer text-[14px] font-semibold">Looked at, not counted ({ignored.length})</summary>
-            <ul className="mt-1">{ignored.map((e) => <EvidenceItem key={e.id} e={e} />)}</ul>
+      {a.alternates.length > 0 && (
+        <section aria-labelledby="alts">
+          <H2><span id="alts">Other airports</span></H2>
+          <Rows>
+            {a.alternates.map((x) => (
+              <Row key={x.airport}>
+                <div className="grid grid-cols-[3.5rem_1fr_auto] sm:grid-cols-[5rem_1fr_auto] gap-3 items-baseline">
+                  <span className="display text-[18px] font-bold">{x.airport}</span>
+                  <span className="text-[15px] text-[var(--gris)] min-w-0">
+                    Instead of {x.side === "origin" ? a.origin.iata : a.destination.iata}
+                    {x.routeOnTime !== undefined ? `, ${Math.round(x.routeOnTime * 100)}% on time` : ""}
+                  </span>
+                  <Level l={x.level} />
+                </div>
+              </Row>
+            ))}
+          </Rows>
+        </section>
+      )}
+
+      <section className="border-t-[1.5px] border-[var(--noir)]">
+        {a.narrative.by === "llm" && (
+          <details>
+            <summary className={summary}>Message for the traveler <span aria-hidden>+</span></summary>
+            <div className="py-4 max-w-[68ch] space-y-2">
+              <p><Cited text={a.narrative.summary} /></p>
+              <p><Cited text={a.narrative.action} /></p>
+              <p className="text-[13px] text-[var(--gris)]">Written by {a.narrative.model}, checked against the evidence.</p>
+            </div>
           </details>
         )}
-      </section>
-
-      <section aria-labelledby="sources">
-        <h2 id="sources" className="display text-2xl font-semibold">Sources checked</h2>
-        <div className="mt-2 overflow-x-auto">
-          <table className="w-full text-[14px] border-collapse min-w-[520px]">
-            <tbody>
-              {a.sources.map((s) => (
-                <tr key={s.source} className="border-t border-[var(--rule)] align-top">
-                  <td className="py-2 pr-3"><a href={s.url} target="_blank" rel="noreferrer" className="hover:underline">{s.name}</a></td>
-                  <td className="py-2 pr-3 whitespace-nowrap font-semibold" style={{ color: s.state === "error" ? "var(--high)" : s.state === "ok" ? "var(--low)" : "var(--na)" }}>{STATE_LABEL[s.state]}</td>
-                  <td className="py-2 text-[var(--muted)]">{s.note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="mt-2 text-[12px] text-[var(--muted)]">Generated {a.generatedAt}.</p>
+        <details>
+          <summary className={summary}>Evidence ({counted.length}) <span aria-hidden>+</span></summary>
+          <ul>{counted.map((e) => <EvidenceRow key={e.id} e={e} />)}</ul>
+          {ignored.length > 0 && (
+            <details className="mt-2 ml-11">
+              <summary className="cursor-pointer py-3 text-[15px] font-semibold">Not counted ({ignored.length})</summary>
+              <ul>{ignored.map((e) => <EvidenceRow key={e.id} e={e} />)}</ul>
+            </details>
+          )}
+        </details>
+        <details>
+          <summary className={summary}>Sources ({a.sources.filter((s) => s.state === "ok").length} of {a.sources.length} used) <span aria-hidden>+</span></summary>
+          <ul>
+            {a.sources.map((s) => (
+              <Row key={s.source}>
+                <div className="flex justify-between gap-4 text-[15px]">
+                  <a href={s.url} target="_blank" rel="noreferrer" className="underline min-w-0">{s.name}</a>
+                  <span className="shrink-0 font-medium" style={{ color: s.state === "error" ? "var(--severe)" : s.state === "ok" ? "var(--noir)" : "var(--gris)" }}>{STATE[s.state]}</span>
+                </div>
+                {s.state === "error" && s.note && <div className="text-[13px] text-[var(--gris)] mt-1">{s.note}</div>}
+              </Row>
+            ))}
+          </ul>
+        </details>
+        {a.narrative.rejectedReason && <p className="mt-3 text-[13px] text-[var(--gris)]">{a.narrative.rejectedReason}.</p>}
       </section>
     </article>
   );
