@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { daysBetween, horizonFor, localDate, zonedInstant } from "./time";
-import { guardDraft } from "./narrate";
+import { guardDraft } from "./ai/briefing";
 import { btsRouteRules, EvidenceBook, faaRules } from "./rules";
 import type { FaaSnapshot } from "./sources/faa";
 import type { Stats } from "./data";

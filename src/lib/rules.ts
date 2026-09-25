@@ -1,6 +1,6 @@
 // Deterministic rules: parsed source data → evidence + factors.
 // These functions are the source of truth for the risk level. The LLM never sees raw data
-// and never sets a level; it only rewrites what these produce (see narrate.ts).
+// and never sets a level; it only rewrites what these produce (see ai/briefing.ts).
 //
 // Aggregation principle: the verdict is the MAX of the factors, never a sum. The TAF, the
 // NWS forecast and an NWS alert often describe the same storm; adding them would triple-count it.

@@ -1,5 +1,5 @@
 // The pipeline: resolve → decide what each source can say about that date → fetch in parallel →
-// rules → level & confidence → actions → narrative. Every source failure degrades the answer
+// rules → level & confidence → actions. The AI briefing is separate (ai/briefing.ts). Every source failure degrades the answer
 // (and says so in `sources` and `confidence`), none of them breaks it.
 
 import type { Airport, Alternate, Assessment, AssessmentRequest, Confidence, Level, SourceId, SourceStatus, Window } from "./types";
@@ -13,7 +13,6 @@ import { parseFaa, type FaaSnapshot } from "./sources/faa";
 import { parseMetars, parseTafs, type Taf } from "./sources/awc";
 import { parseAlerts, parseForecast } from "./sources/nws";
 import { alertRules, btsRouteRules, EvidenceBook, faaRules, forecastRules, metarRules, tafRules } from "./rules";
-import { narrate } from "./narrate";
 
 export class InputError extends Error {}
 
@@ -221,12 +220,11 @@ export async function assess(req: AssessmentRequest, provider: Provider): Promis
   actions.unshift(DEFAULTS[level]);
   if (horizon.recheck) actions.push(horizon.recheck);
 
-  const base: Omit<Assessment, "narrative"> = {
+  return {
     request: req, origin, destination, horizon, windows: [oWin, dWin], level,
     confidence: { level: conf, reasons },
     factors: book.factors, evidence: book.items, actions, alternates, sources,
     generatedAt: now.toISOString(),
   };
-  return { ...base, narrative: await narrate(base) };
 }
 

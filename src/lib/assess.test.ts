@@ -16,7 +16,6 @@ describe("recorded 2026-09-25, JFK → SFO", () => {
     expect(a.level).toBe("HIGH");
     expect(a.factors.find((f) => f.side === "destination" && f.summary.startsWith("Ground delay program for SFO"))?.level).toBe("MODERATE");
     expect(a.sources.find((s) => s.source === "faa")?.state).toBe("ok");
-    expect(a.narrative.by).toBe("template");
   });
 
   it("shows but does not count the flood/surf alerts", async () => {

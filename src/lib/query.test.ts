@@ -3,7 +3,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { replayProvider } from "@/test/providers";
 import { requestFromParams, searchFor } from "./query";
-import { runAssessment } from "./run";
+import { cachedAssessment, runAssessment } from "./run";
 
 describe("requestFromParams", () => {
   it("reads a trip and normalizes the codes", () => {
@@ -40,5 +40,27 @@ describe("runAssessment", () => {
   it("returns the assessment", async () => {
     const r = await runAssessment({ origin: "jfk", destination: "sfo", date: "2026-09-25" }, replayProvider());
     expect(r.ok && r.assessment.origin.iata).toBe("JFK");
+  });
+});
+
+describe("cachedAssessment", () => {
+  beforeAll(() => { vi.stubEnv("OPENAI_API_KEY", ""); });
+
+  it("computes a trip once, so the chat sees exactly what the page showed", async () => {
+    const p = replayProvider();
+    const spy = vi.spyOn(p, "faaStatusXml");
+    const req = { origin: "JFK", destination: "SFO", date: "2026-09-25" };
+    const [x, y] = await Promise.all([cachedAssessment(req, p), cachedAssessment({ ...req, origin: "jfk" }, p)]);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(x).toBe(y);
+  });
+
+  it("does not keep a failure", async () => {
+    const p = replayProvider();
+    const bad = { origin: "QQQ", destination: "SFO", date: "2026-09-25" };
+    expect((await cachedAssessment(bad, p)).ok).toBe(false);
+    const spy = vi.spyOn(p, "now");
+    await cachedAssessment(bad, p);
+    expect(spy).toHaveBeenCalled();
   });
 });

@@ -19,7 +19,7 @@ export type SourceId =
 
 export type Side = "origin" | "destination" | "route";
 
-/** One observable fact from one source. Factors and the narrative may only point at these. */
+/** One observable fact from one source. Factors, the briefing and the chat may only point at these. */
 export interface Evidence {
   id: string; // "E1", "E2"… stable within one assessment
   source: SourceId;
@@ -94,15 +94,10 @@ export interface Alternate {
   routeOnTime?: number; // historical on-time share for the alternate pair, if BTS has it
 }
 
-export interface Narrative {
-  by: "llm" | "template";
-  summary: string;
-  action: string;
-  citations: string[];
-  model?: string;
-  /** Why an LLM draft was thrown away, when it was. */
-  rejectedReason?: string;
-}
+/** The model's message for the traveler, or why there is none. Never part of the verdict. */
+export type Briefing =
+  | { ok: true; summary: string; action: string; citations: string[]; model: string }
+  | { ok: false; reason: string };
 
 export interface AssessmentRequest {
   origin: string;
@@ -123,6 +118,5 @@ export interface Assessment {
   actions: string[];
   alternates: Alternate[];
   sources: SourceStatus[];
-  narrative: Narrative;
   generatedAt: string;
 }

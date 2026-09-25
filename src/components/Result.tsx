@@ -4,6 +4,7 @@ import { useState } from "react";
 import { groupSignals, signalOf, type SignalGroup } from "@/lib/signal";
 import type { Alternate, Assessment, Evidence, Factor, Level as LevelT, SourceState } from "@/lib/types";
 import { COLS, RouteHeader } from "./Board";
+import { Cited } from "./Cited";
 import { Check, Chevron } from "./icons";
 
 const WORD: Record<LevelT, string> = { LOW: "Low", MODERATE: "Moderate", HIGH: "High", SEVERE: "Severe" };
@@ -27,26 +28,6 @@ const Swatch = ({ l }: { l: LevelT }) => (
   <span className="inline-block size-2.5 rounded-[3px] shrink-0" style={{ background: `var(--${l.toLowerCase()})`, boxShadow: l === "LOW" ? OUTLINE : undefined }} aria-hidden />
 );
 
-/** "[E3]" or "[E3, E4]" in rule or LLM text becomes quiet links to the evidence. */
-function Cited({ text }: { text: string }) {
-  return (
-    <>
-      {text.split(/(\s?\[E\d+(?:,\s*E\d+)*\])/g).map((p, i) => {
-        const ids = /^\s?\[(E\d+(?:,\s*E\d+)*)\]$/.exec(p)?.[1].split(/,\s*/);
-        if (!ids) return <span key={i}>{p}</span>;
-        return (
-          <span key={i} className="whitespace-nowrap">
-            {ids.map((id) => (
-              <a key={id} href={`#${id}`} onClick={() => openEvidence()} className="ml-1.5 text-[12px] text-[var(--gris)] underline hover:text-[var(--noir)]">{id}</a>
-            ))}
-          </span>
-        );
-      })}
-    </>
-  );
-}
-
-const openEvidence = () => { const d = document.getElementById("evidence") as HTMLDetailsElement | null; if (d) d.open = true; };
 const worst = (fs: Factor[]): LevelT | null => (fs.length ? fs.reduce<LevelT>((l, f) => (RANK[f.level] > RANK[l] ? f.level : l), "LOW") : null);
 const shortDate = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).replace("Sept", "Sep");
 const when = (s?: string) => {
@@ -174,7 +155,7 @@ function Fold({ id, title, children }: { id?: string; title: React.ReactNode; ch
   );
 }
 
-export function Result({ a }: { a: Assessment }) {
+export function Result({ a, briefing, chat }: { a: Assessment; briefing: React.ReactNode; chat: React.ReactNode }) {
   const counted = a.evidence.filter((e) => !e.ignoredBecause);
   const ignored = a.evidence.filter((e) => e.ignoredBecause);
   const tooEarly = a.confidence.level === "VERY_LOW" && a.factors.length === 0;
@@ -214,16 +195,14 @@ export function Result({ a }: { a: Assessment }) {
 
       <DoList actions={a.actions} />
 
+      <section aria-labelledby="message">
+        <h2 id="message" className="text-[26px] font-bold mb-3">Message for the traveler</h2>
+        {briefing}
+      </section>
+
+      {chat}
+
       <section className="border-t-[1.5px] border-[var(--noir)]">
-        {a.narrative.by === "llm" && (
-          <Fold title="Message for the traveler">
-            <div className="py-4 max-w-[68ch] space-y-2">
-              <p><Cited text={a.narrative.summary} /></p>
-              <p><Cited text={a.narrative.action} /></p>
-              <p className="text-[13px] text-[var(--gris)]">Written by {a.narrative.model}, checked against the evidence.</p>
-            </div>
-          </Fold>
-        )}
         <Fold id="evidence" title={`Evidence (${counted.length})`}>
           <ul>{counted.map((e) => <EvidenceRow key={e.id} e={e} />)}</ul>
           {ignored.length > 0 && (
@@ -246,7 +225,6 @@ export function Result({ a }: { a: Assessment }) {
             ))}
           </ul>
         </Fold>
-        {a.narrative.rejectedReason && <p className="mt-3 text-[13px] text-[var(--gris)]">{a.narrative.rejectedReason}.</p>}
       </section>
     </article>
   );
