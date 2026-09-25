@@ -1,13 +1,19 @@
 # syntax=docker/dockerfile:1
 
+# Build on Node, with the Bun binary only for installing and running scripts. On Bun's runtime
+# alone, `next build` fails to load Next's compiled server ("Expected CommonJS module to have a
+# function wrapper"); with Node present, `bun run build` hands `next` to Node, as on a laptop.
+
 # ── deps: exact lockfile, nothing else
-FROM oven/bun:1.3.11 AS deps
+FROM node:24-bookworm-slim AS deps
+COPY --from=oven/bun:1.3.11 /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 # ── build: Next standalone output
-FROM oven/bun:1.3.11 AS build
+FROM node:24-bookworm-slim AS build
+COPY --from=oven/bun:1.3.11 /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
