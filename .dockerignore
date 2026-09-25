@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.github
+.claude
+.env*
+coverage
+fixtures
+scripts/__pycache__
+*.tsbuildinfo
+Dockerfile
+.dockerignore

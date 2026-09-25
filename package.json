@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "data": "python3 scripts/build_bts.py && python3 scripts/build_airports.py"
   },
   "dependencies": {
