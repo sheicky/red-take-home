@@ -7,7 +7,7 @@ name="${1:-travel-risk}"
 out="${2:-$HOME/Downloads}/$name.zip"
 rm -f "$out"
 zip -rq "$out" . \
-  -x 'node_modules/*' '.next/*' '.git/*' '*.DS_Store' 'next-env.d.ts' '*.tsbuildinfo' \
+  -x 'node_modules/*' '.next/*' '.git/*' '.gstack/*' '.claude/*' '*.DS_Store' 'next-env.d.ts' '*.tsbuildinfo' \
   -x '.env' '.env.local' '.env.*.local' '.env.production' '.env.development'
 # Belt and braces: refuse to ship anything that looks like a key.
 if unzip -l "$out" | grep -E '\.env($|\.local)' ; then echo "REFUSED: an env file slipped in" >&2; rm -f "$out"; exit 1; fi
