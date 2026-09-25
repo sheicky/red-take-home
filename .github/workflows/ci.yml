@@ -24,7 +24,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run typecheck
-      # No OpenAI key here on purpose: the AI code is tested against a mocked API.
+      # No key here on purpose: the AI code is tested against a mocked API. The live check is below.
       - run: bun run test
       - run: bun run build
 
@@ -78,3 +78,30 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
+
+  ai-live:
+    name: Live AI check (OpenRouter)
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+    steps:
+      - name: Skip without a key
+        if: env.OPENROUTER_API_KEY == ''
+        run: echo "::notice::OPENROUTER_API_KEY secret not set, live AI check skipped."
+      - uses: actions/checkout@v4
+        if: env.OPENROUTER_API_KEY != ''
+      - uses: oven-sh/setup-bun@v2
+        if: env.OPENROUTER_API_KEY != ''
+        with:
+          bun-version: 1.3.11
+      - name: Build, start, ask for a message and a chat answer
+        if: env.OPENROUTER_API_KEY != ''
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+          bun run start -p 3000 > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs http://localhost:3000/ >/dev/null && break; sleep 1; done
+          bun run smoke:ai http://localhost:3000 || { cat server.log; exit 1; }

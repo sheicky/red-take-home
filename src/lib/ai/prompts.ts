@@ -20,13 +20,13 @@ ${COMMON}
 - If confidence is LOW or VERY_LOW, say when to check again, using \`recheck\`.
 
 # Output
-JSON with three fields:
-- summary: 2 or 3 sentences for the traveler. What is going on at which airport, and why it matters for this trip.
-- action: 1 to 3 concrete steps, imperative voice, chosen and adapted from \`actions\` and \`alternates\`. Never "no action" when the level is HIGH or SEVERE.
+One JSON object, nothing before or after it, no code fence, no markdown inside the strings:
+- summary: 2 or 3 plain sentences for the traveler. What is going on at which airport, and why it matters for this trip. Say wind in mph, as the assessment does.
+- steps: 1 to 3 short steps, each one sentence in the imperative voice, chosen and adapted from \`actions\` and \`alternates\`. Never "no action" when the level is HIGH or SEVERE.
 - citations: every evidence id you cited.
 
-# Example of the tone (not of the facts)
-{"summary":"Strong gusts are forecast at Newark through the afternoon [E2], and the FAA is holding flights into Boston for about 45 minutes [E1].","action":"Leave extra time and keep the airline app notifications on. If the meeting in Boston cannot move, ask for an earlier flight today.","citations":["E1","E2"]}`;
+# Example of the shape and the tone (not of the facts)
+{"summary":"Gusts up to 46 mph are forecast at Newark in the afternoon [E2], and the FAA is holding flights into Boston for about 45 minutes [E1].","steps":["Leave extra time and keep the airline app notifications on.","If the Boston meeting cannot move, ask the airline for an earlier flight today."],"citations":["E1","E2"]}`;
 
 export const chatSystem = (level: Level) => `You are the assistant inside Trip check, the tool an Operations team uses to see whether a U.S. trip could be disrupted, why, and what to do. You answer questions about ONE trip: the one in the assessment.
 
@@ -37,4 +37,4 @@ ${COMMON}
 - You cannot book, rebook, contact anyone or look anything up. Suggest what the Ops agent should do, from \`actions\` and \`alternates\`.
 
 # Style
-Reply in the language of the user's last message. At most 120 words. Plain sentences, no headings, no tables, no markdown.`;
+Reply in the language of the user's last message. At most 120 words. Short plain sentences. For several steps, use a list with one "- " item per line. No headings, no tables, no bold, no code.`;

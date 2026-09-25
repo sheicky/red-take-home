@@ -17,8 +17,10 @@ export function BriefingView({ b, known }: { b: Briefing; known: string[] }) {
   return (
     <div className="rounded-2xl border border-[var(--filet)] bg-white p-5 max-w-[72ch] space-y-3">
       <p><Cited text={b.summary} known={known} /></p>
-      <p className="font-semibold"><Cited text={b.action} known={known} /></p>
-      <p className="text-[13px] text-[var(--gris)]">Written by {b.model} from the evidence below, then checked: it cites only this evidence and keeps the level.</p>
+      <ul className="list-disc pl-5 space-y-1 font-semibold">
+        {b.steps.map((x, i) => <li key={i}><Cited text={x} known={known} /></li>)}
+      </ul>
+      <p className="text-[13px] text-[var(--gris)]">Written by {b.model} through OpenRouter, from the evidence below. Checked before display: it cites only this evidence and keeps the level.</p>
     </div>
   );
 }

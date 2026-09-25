@@ -6,7 +6,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { assess, InputError } from "./assess";
 import { blizzardProvider, replayProvider } from "@/test/providers";
 
-beforeAll(() => { vi.stubEnv("OPENAI_API_KEY", ""); });
+beforeAll(() => { vi.stubEnv("OPENROUTER_API_KEY", ""); });
 
 const recorded = replayProvider;
 

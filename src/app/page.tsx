@@ -4,7 +4,7 @@ import { Chat } from "@/components/Chat";
 import { Result } from "@/components/Result";
 import { ResultSkeleton } from "@/components/ResultSkeleton";
 import { TripForm } from "@/components/TripForm";
-import { openaiConfig } from "@/lib/ai/openai";
+import { llmConfig } from "@/lib/ai/llm";
 import { requestFromParams, searchFor } from "@/lib/query";
 import { cachedAssessment, cachedBriefing } from "@/lib/run";
 import type { Assessment, AssessmentRequest } from "@/lib/types";
@@ -20,13 +20,13 @@ async function Assessed({ req }: { req: AssessmentRequest }) {
   if (!r.ok) return <p role="alert" className="font-medium" style={{ color: "var(--severe)" }}>{r.error}</p>;
   const a = r.assessment;
   const known = a.evidence.map((e) => e.id);
-  const aiOn = !!openaiConfig().key;
+  const aiOn = !!llmConfig().key;
   return (
     <Result
       a={a}
       briefing={aiOn
         ? <Suspense key="briefing" fallback={<BriefingSkeleton />}><Briefed a={a} /></Suspense>
-        : <p key="briefing-off" className="text-[14px] text-[var(--gris)]">The message and the chat are off: OPENAI_API_KEY is not set on the server.</p>}
+        : <p key="briefing-off" className="text-[14px] text-[var(--gris)]">The message and the chat are off: OPENROUTER_API_KEY is not set on the server.</p>}
       chat={aiOn ? <Chat key="chat" trip={{ from: a.request.origin, to: a.request.destination, date: a.request.date }} known={known} /> : null}
     />
   );

@@ -97,7 +97,7 @@ export interface Alternate {
 
 /** The model's message for the traveler, or why there is none. Never part of the verdict. */
 export type Briefing =
-  | { ok: true; summary: string; action: string; citations: string[]; model: string }
+  | { ok: true; summary: string; steps: string[]; citations: string[]; model: string }
   | { ok: false; reason: string };
 
 export interface AssessmentRequest {

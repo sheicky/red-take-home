@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "next typegen && tsc --noEmit",
+    "smoke:ai": "bun scripts/smoke-ai.ts",
     "data": "python3 scripts/build_bts.py && python3 scripts/build_airports.py"
   },
   "dependencies": {

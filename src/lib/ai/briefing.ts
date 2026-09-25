@@ -3,16 +3,18 @@
 // The rules decide the level, the factors and the actions. The model gets THAT (see context.ts),
 // never the raw feeds, and writes the short message the Ops agent sends the traveler. A guard
 // then checks the draft: citing evidence that does not exist, stating another level, or waving
-// off a HIGH/SEVERE risk throws it away, and the page says why. The "Do" list, written by the
+// off a HIGH/SEVERE risk throws it away, and the page says why. A malformed or rejected
+// draft gets ONE retry, told what was wrong: free models slip on format more than on facts. The "Do" list, written by the
 // rules, is always there: the tool never depends on the model to be useful.
 
 import type { Assessment, Briefing, Level } from "../types";
 import { levelRank } from "../types";
 import { fenced } from "./context";
-import { openaiChat, openaiConfig } from "./openai";
+import { jsonIn, plain } from "./format";
+import { llmChat, llmConfig, upstreamError } from "./llm";
 import { briefingSystem } from "./prompts";
 
-type Draft = { summary: string; action: string; citations: string[] };
+export type Draft = { summary: string; steps: string[]; citations: string[] };
 
 const OTHER_LEVEL_WORDS: Record<Level, RegExp> = {
   LOW: /\b(moderate|high|severe|elevated|significant)[- ]risk\b/i,
@@ -23,49 +25,64 @@ const OTHER_LEVEL_WORDS: Record<Level, RegExp> = {
 
 /** Returns the reason to reject a draft, or null when it may be shown. Pure — unit tested. */
 export function guardDraft(d: Draft, level: Level, evidenceIds: Set<string>): string | null {
-  if (typeof d?.summary !== "string" || typeof d.action !== "string" || !d.summary.trim() || !d.action.trim()) return "empty or malformed summary/action";
+  const steps = Array.isArray(d?.steps) ? d.steps : null;
+  if (typeof d?.summary !== "string" || !d.summary.trim() || !steps || steps.some((x) => typeof x !== "string" || !x.trim())) return "empty or malformed summary/steps";
+  if (steps.length < 1 || steps.length > 3) return "steps must hold 1 to 3 items";
+  const text = `${d.summary} ${steps.join(" ")}`;
   const cites = Array.isArray(d.citations) ? d.citations.map(String) : [];
-  const inline = [...`${d.summary} ${d.action}`.matchAll(/\bE\d+\b/g)].map((m) => m[0]);
+  const inline = [...text.matchAll(/\bE\d+\b/g)].map((m) => m[0]);
   const bogus = [...new Set([...cites, ...inline])].filter((id) => !evidenceIds.has(id));
   if (bogus.length) return `cited evidence that does not exist: ${bogus.join(", ")}`;
   if (!cites.length && !inline.length && evidenceIds.size) return "no evidence cited";
-  if (OTHER_LEVEL_WORDS[level].test(`${d.summary} ${d.action}`)) return `text states a risk level other than ${level}`;
-  if (levelRank(level) >= 2 && /\bno (action|need)|nothing to do|not? (worry|concern)/i.test(d.action)) return `action dismisses a ${level} risk`;
-  if (d.summary.length > 900 || d.action.length > 600) return "draft too long for an Ops handoff";
+  if (OTHER_LEVEL_WORDS[level].test(text)) return `text states a risk level other than ${level}`;
+  if (levelRank(level) >= 2 && steps.some((x) => /\bno (action|need)|nothing to do|not? (worry|concern)/i.test(x))) return `a step dismisses a ${level} risk`;
+  if (d.summary.length > 900 || steps.join("").length > 600) return "draft too long for an Ops handoff";
   return null;
 }
 
-const SCHEMA = {
-  type: "json_schema",
-  json_schema: {
-    name: "briefing", strict: true,
-    schema: {
-      type: "object", additionalProperties: false, required: ["summary", "action", "citations"],
-      properties: { summary: { type: "string" }, action: { type: "string" }, citations: { type: "array", items: { type: "string" } } },
-    },
-  },
-};
+/** Parse, clean, check. Returns the draft or why it cannot be shown. */
+export function readDraft(content: string, level: Level, ids: Set<string>): { draft: Draft } | { reason: string } {
+  let raw: Record<string, unknown>;
+  try {
+    raw = jsonIn(content) as Record<string, unknown>;
+  } catch {
+    return { reason: "the reply was not valid JSON" };
+  }
+  // Older habit of some models: one "action" string instead of a list of steps.
+  const rawSteps = Array.isArray(raw.steps) ? raw.steps : typeof raw.action === "string" ? [raw.action] : null;
+  const draft: Draft = {
+    summary: typeof raw.summary === "string" ? plain(raw.summary) : (raw.summary as string),
+    steps: rawSteps ? rawSteps.map((x) => (typeof x === "string" ? plain(x) : x)).filter((x) => x !== "") as string[] : (raw.steps as string[]),
+    citations: Array.isArray(raw.citations) ? raw.citations.map(String) : [],
+  };
+  const reason = guardDraft(draft, level, ids);
+  return reason ? { reason } : { draft };
+}
+
+const FORMAT = { type: "json_object" };
 
 export async function writeBriefing(a: Assessment, fetchImpl: typeof fetch = fetch): Promise<Briefing> {
-  const { key, model } = openaiConfig();
-  if (!key) return { ok: false, reason: "OPENAI_API_KEY is not set on the server." };
+  const { key, model } = llmConfig();
+  if (!key) return { ok: false, reason: "OPENROUTER_API_KEY is not set on the server." };
+  const ids = new Set(a.evidence.map((e) => e.id));
+  const messages: { role: string; content: string }[] = [
+    { role: "system", content: briefingSystem(a.level) },
+    { role: "system", content: fenced(a) },
+    { role: "user", content: "Write the message as the JSON object described above. JSON only." },
+  ];
+  let reason = "";
   try {
-    const res = await openaiChat(
-      { messages: [{ role: "system", content: briefingSystem(a.level) }, { role: "system", content: fenced(a) }], response_format: SCHEMA },
-      fetchImpl, AbortSignal.timeout(45_000),
-    );
-    if (!res.ok) return { ok: false, reason: `OpenAI ${res.status}: ${(await res.text()).slice(0, 160)}` };
-    const j = await res.json();
-    let draft: Draft;
-    try {
-      draft = JSON.parse(j.choices?.[0]?.message?.content ?? "") as Draft;
-    } catch {
-      return { ok: false, reason: "the model's draft was not valid JSON" };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const res = await llmChat({ messages, response_format: FORMAT }, fetchImpl, AbortSignal.timeout(45_000));
+      if (!res.ok) return { ok: false, reason: await upstreamError(res) };
+      const content: string = (await res.json()).choices?.[0]?.message?.content ?? "";
+      const r = readDraft(content, a.level, ids);
+      if ("draft" in r) return { ok: true, ...r.draft, model };
+      reason = r.reason;
+      messages.push({ role: "assistant", content }, { role: "user", content: `That draft was rejected: ${reason}. Reply again with only the JSON object, following every rule.` });
     }
-    const reason = guardDraft(draft, a.level, new Set(a.evidence.map((e) => e.id)));
-    if (reason) return { ok: false, reason: `the model's draft was rejected: ${reason}` };
-    return { ok: true, summary: draft.summary, action: draft.action, citations: draft.citations ?? [], model };
+    return { ok: false, reason: `the model's draft was rejected twice: ${reason}` };
   } catch (e) {
-    return { ok: false, reason: `OpenAI unavailable: ${(e as Error).message}` };
+    return { ok: false, reason: `model unavailable: ${(e as Error).message}` };
   }
 }

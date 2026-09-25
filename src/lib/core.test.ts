@@ -96,17 +96,20 @@ describe("history is a prior, capped at MODERATE", () => {
 
 describe("LLM guard", () => {
   const ids = new Set(["E1", "E2", "E3"]);
-  const ok = { summary: "Ground delay program at SFO [E2].", action: "Call the traveler and protect the 6 pm meeting.", citations: ["E2"] };
+  const ok = { summary: "Ground delay program at SFO [E2].", steps: ["Call the traveler and protect the 6 pm meeting."], citations: ["E2"] };
   it("accepts a grounded draft", () => expect(guardDraft(ok, "HIGH", ids)).toBeNull());
   it("rejects invented evidence ids", () => expect(guardDraft({ ...ok, citations: ["E9"] }, "HIGH", ids)).toMatch(/E9/));
   it("rejects inline ids that do not exist", () => expect(guardDraft({ ...ok, summary: "Storm [E7]." }, "HIGH", ids)).toMatch(/E7/));
   it("rejects a different level", () => expect(guardDraft({ ...ok, summary: "Low risk overall [E1]." }, "HIGH", ids)).toMatch(/level/));
-  it("rejects waving off a HIGH risk", () => expect(guardDraft({ ...ok, action: "No action needed." }, "HIGH", ids)).toMatch(/dismisses/));
+  it("rejects waving off a HIGH risk", () => expect(guardDraft({ ...ok, steps: ["No action needed."] }, "HIGH", ids)).toMatch(/dismisses/));
   it("rejects a malformed draft instead of crashing", () => {
-    expect(guardDraft({ summary: "x [E1]", action: "y" } as never, "LOW", ids)).toBeNull();
-    expect(guardDraft({ summary: 3, action: "y", citations: [] } as never, "LOW", ids)).toMatch(/malformed/);
+    expect(guardDraft({ summary: "x [E1]", steps: ["y"] } as never, "LOW", ids)).toBeNull();
+    expect(guardDraft({ summary: 3, steps: ["y"], citations: [] } as never, "LOW", ids)).toMatch(/malformed/);
+    expect(guardDraft({ summary: "x [E1]", steps: "y" } as never, "LOW", ids)).toMatch(/malformed/);
+    expect(guardDraft({ ...ok, steps: [] }, "LOW", ids)).toMatch(/1 to 3/);
+    expect(guardDraft({ ...ok, steps: ["a", "b", "c", "d"] }, "LOW", ids)).toMatch(/1 to 3/);
   });
-  it("rejects an uncited draft", () => expect(guardDraft({ summary: "Bad weather.", action: "Call.", citations: [] }, "MODERATE", ids)).toMatch(/cited/));
+  it("rejects an uncited draft", () => expect(guardDraft({ summary: "Bad weather.", steps: ["Call."], citations: [] }, "MODERATE", ids)).toMatch(/cited/));
 });
 
 describe("a missing month is not a missing route", () => {

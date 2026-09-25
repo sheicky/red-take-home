@@ -127,7 +127,7 @@ describe("groupSignals", () => {
 });
 
 describe("signalOf over the real pipeline", () => {
-  beforeAll(() => { vi.stubEnv("OPENAI_API_KEY", ""); });
+  beforeAll(() => { vi.stubEnv("OPENROUTER_API_KEY", ""); });
 
   const runs = [
     { req: { origin: "JFK", destination: "SFO", date: "2026-09-25" }, provider: replayProvider },

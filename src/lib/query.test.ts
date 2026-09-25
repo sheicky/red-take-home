@@ -30,7 +30,7 @@ describe("searchFor", () => {
 });
 
 describe("runAssessment", () => {
-  beforeAll(() => { vi.stubEnv("OPENAI_API_KEY", ""); });
+  beforeAll(() => { vi.stubEnv("OPENROUTER_API_KEY", ""); });
 
   it("turns an input problem into a 400 with the message", async () => {
     expect(await runAssessment({ origin: "XXX", destination: "SFO", date: "2026-09-25" }, replayProvider()))
@@ -44,7 +44,7 @@ describe("runAssessment", () => {
 });
 
 describe("cachedAssessment", () => {
-  beforeAll(() => { vi.stubEnv("OPENAI_API_KEY", ""); });
+  beforeAll(() => { vi.stubEnv("OPENROUTER_API_KEY", ""); });
 
   it("computes a trip once, so the chat sees exactly what the page showed", async () => {
     const p = replayProvider();

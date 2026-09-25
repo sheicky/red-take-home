@@ -23,62 +23,80 @@ afterEach(() => { vi.unstubAllEnvs(); });
 
 describe("writeBriefing", () => {
   it("is unavailable without a key, says why, and calls nobody", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("OPENROUTER_API_KEY", "");
     const f = vi.fn();
-    expect(await writeBriefing(base, f as never)).toEqual({ ok: false, reason: "OPENAI_API_KEY is not set on the server." });
+    expect(await writeBriefing(base, f as never)).toEqual({ ok: false, reason: "OPENROUTER_API_KEY is not set on the server." });
     expect(f).not.toHaveBeenCalled();
   });
 
   it("returns a grounded draft, built from the rules' output and never the raw feeds", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "sk-test");
-    vi.stubEnv("OPENAI_MODEL", "gpt-5-mini");
-    const f = reply({ summary: "Strong gusts at JFK during the day [E1].", action: "Call the traveler before they leave.", citations: ["E1"] });
-    expect(await writeBriefing(base, f as never)).toEqual({ ok: true, summary: "Strong gusts at JFK during the day [E1].", action: "Call the traveler before they leave.", citations: ["E1"], model: "gpt-5-mini" });
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    vi.stubEnv("OPENROUTER_MODEL", "google/gemma-4-31b-it:free");
+    const f = reply({ summary: "Strong gusts at JFK during the day [E1].", steps: ["Call the traveler before they leave."], citations: ["E1"] });
+    expect(await writeBriefing(base, f as never)).toEqual({ ok: true, summary: "Strong gusts at JFK during the day [E1].", steps: ["Call the traveler before they leave."], citations: ["E1"], model: "google/gemma-4-31b-it:free" });
     const body = JSON.parse((f.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(body.model).toBe("google/gemma-4-31b-it:free");
     expect(body.messages[0].content).toContain("already decided by the rules: HIGH");
     expect(body.messages[1].content.startsWith("<assessment>")).toBe(true);
     expect(body.messages[1].content).not.toContain("rawTAF");
-    expect(body.response_format.json_schema.strict).toBe(true);
-    expect(body.reasoning_effort).toBe("low");
+    expect(body.response_format).toEqual({ type: "json_object" });
   });
 
-  it("throws away a draft that downgrades the level, and says why", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "sk-test");
-    const b = await writeBriefing(base, reply({ summary: "Low risk overall [E1].", action: "Monitor.", citations: ["E1"] }) as never);
-    expect(b).toMatchObject({ ok: false, reason: expect.stringMatching(/risk level other than HIGH/) });
+  it("cleans a reply wrapped in a code fence, with markdown in the strings", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    const content = 'Here you go:\n```json\n{"summary":"**Strong gusts** at JFK [E1].","steps":["- *Call* the traveler."],"citations":["E1"]}\n```';
+    expect(await writeBriefing(base, reply(content) as never)).toMatchObject({ ok: true, summary: "Strong gusts at JFK [E1].", steps: ["Call the traveler."] });
+  });
+
+  it("retries once, telling the model what was wrong, and keeps the good second draft", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    const drafts = ["sorry, I cannot", JSON.stringify({ summary: "Gusts at JFK [E1].", steps: ["Call the traveler."], citations: ["E1"] })];
+    const f = vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: drafts.shift() } }] }), { status: 200 }));
+    expect(await writeBriefing(base, f as never)).toMatchObject({ ok: true, summary: "Gusts at JFK [E1]." });
+    expect(f).toHaveBeenCalledTimes(2);
+    const second = JSON.parse((f.mock.calls[1] as unknown as [string, RequestInit])[1].body as string);
+    expect(second.messages.at(-1).content).toMatch(/rejected: the reply was not valid JSON/);
+  });
+
+  it("throws away a draft that downgrades the level twice, and says why", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    const f = reply({ summary: "Low risk overall [E1].", steps: ["Monitor."], citations: ["E1"] });
+    expect(await writeBriefing(base, f as never)).toMatchObject({ ok: false, reason: expect.stringMatching(/rejected twice: text states a risk level other than HIGH/) });
+    expect(f).toHaveBeenCalledTimes(2);
   });
 
   it("throws away a draft that cites evidence that does not exist", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "sk-test");
-    const b = await writeBriefing(base, reply({ summary: "Storm at SFO [E9].", action: "Rebook.", citations: ["E9"] }) as never);
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    const b = await writeBriefing(base, reply({ summary: "Storm at SFO [E9].", steps: ["Rebook."], citations: ["E9"] }) as never);
     expect(b).toMatchObject({ ok: false, reason: expect.stringContaining("E9") });
   });
 
-  it("survives a reply that is not JSON", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "sk-test");
-    expect(await writeBriefing(base, reply("sorry, I cannot") as never)).toMatchObject({ ok: false, reason: expect.stringMatching(/not valid JSON/) });
-  });
-
-  it("reports an API error without failing", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "sk-test");
-    const f = vi.fn(async () => new Response("quota", { status: 429 }));
-    expect(await writeBriefing(base, f as never)).toMatchObject({ ok: false, reason: expect.stringContaining("429") });
+  it("reports an API error in one readable line, without retrying", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    const f = vi.fn(async () => new Response('{"error":{"message":"Rate limit exceeded: free-models-per-min"}}', { status: 429 }));
+    expect(await writeBriefing(base, f as never)).toEqual({ ok: false, reason: "model API 429: Rate limit exceeded: free-models-per-min" });
+    expect(f).toHaveBeenCalledTimes(1);
   });
 });
 
-describe("OPENAI_BASE_URL", () => {
+describe("OPENROUTER_BASE_URL", () => {
+  const ok = { summary: "Gusts at JFK [E1].", steps: ["Call the traveler."], citations: ["E1"] };
+
   it("sends the request to the configured base, for a proxy or a local stand-in", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "sk-test");
-    vi.stubEnv("OPENAI_BASE_URL", "http://127.0.0.1:3231/v1/");
-    const f = reply({ summary: "Gusts at JFK [E1].", action: "Call the traveler.", citations: ["E1"] });
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    vi.stubEnv("OPENROUTER_BASE_URL", "http://127.0.0.1:3231/v1/");
+    const f = reply(ok);
     await writeBriefing(base, f as never);
     expect((f.mock.calls[0] as unknown as [string])[0]).toBe("http://127.0.0.1:3231/v1/chat/completions");
   });
 
-  it("defaults to OpenAI", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "sk-test");
-    const f = reply({ summary: "Gusts at JFK [E1].", action: "Call the traveler.", citations: ["E1"] });
+  it("defaults to OpenRouter and the free Gemma model", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    const f = reply(ok);
     await writeBriefing(base, f as never);
-    expect((f.mock.calls[0] as unknown as [string])[0]).toBe("https://api.openai.com/v1/chat/completions");
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://openrouter.ai/api/v1/chat/completions");
+    expect(JSON.parse(init.body as string).model).toBe("google/gemma-4-31b-it:free");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer sk-or-test");
   });
 });

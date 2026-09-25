@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Cited } from "./Cited";
+import { Formatted } from "./Formatted";
 
 type Turn = { role: "user" | "assistant"; content: string };
 
@@ -56,9 +56,9 @@ export function Chat({ trip, known }: { trip: { from: string; to: string; date: 
               t.role === "user" ? (
                 <p key={i} className="ml-auto w-fit max-w-[85%] rounded-2xl bg-[var(--noir)] text-[var(--creme)] px-4 py-2.5">{t.content}</p>
               ) : (
-                <p key={i} className="max-w-[72ch] whitespace-pre-wrap">
-                  {t.content ? <Cited text={t.content} known={known} /> : <span className="inline-block h-4 w-24 rounded-md bg-[var(--filet)] animate-pulse align-middle" aria-label="Answering" />}
-                </p>
+                <div key={i} className="max-w-[72ch]">
+                  {t.content ? <Formatted text={t.content} known={known} /> : <span className="inline-block h-4 w-24 rounded-md bg-[var(--filet)] animate-pulse align-middle" aria-label="Answering" />}
+                </div>
               ),
             )}
             <div ref={end} />

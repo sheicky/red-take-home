@@ -123,14 +123,14 @@ describe("handleChat", () => {
   const deps = (fetchImpl: typeof fetch) => ({ assessment: async () => ({ ok: true as const, assessment: a }), fetchImpl });
 
   it("is unavailable without a key, and says so", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("OPENROUTER_API_KEY", "");
     const r = await handleChat({ ...trip, messages: [{ role: "user", content: "hi" }] }, deps(vi.fn()));
     expect(r.status).toBe(503);
-    expect((await r.json()).error).toMatch(/OPENAI_API_KEY/);
+    expect((await r.json()).error).toMatch(/OPENROUTER_API_KEY/);
   });
 
   it("rejects a bad body before calling anyone", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-test");
     const f = vi.fn();
     expect((await handleChat({ ...trip, messages: [{ role: "system", content: "x" }] }, deps(f))).status).toBe(400);
     expect((await handleChat({ from: "JFK", messages: [] } as never, deps(f))).status).toBe(400);
@@ -138,7 +138,7 @@ describe("handleChat", () => {
   });
 
   it("streams the model's answer as plain text, grounded on the server's own assessment", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-test");
     const f = vi.fn(async () => new Response(sse('data: {"choices":[{"delta":{"content":"Because of wind [E1]."}}]}\n\n', "data: [DONE]\n\n"), { status: 200 }));
     const r = await handleChat({ ...trip, messages: [{ role: "user", content: "Why?" }] }, deps(f as never));
     expect(r.status).toBe(200);
@@ -149,7 +149,7 @@ describe("handleChat", () => {
   });
 
   it("reports an upstream error instead of streaming nothing", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-test");
     const f = vi.fn(async () => new Response('{"error":{"message":"quota"}}', { status: 429 }));
     const r = await handleChat({ ...trip, messages: [{ role: "user", content: "Why?" }] }, deps(f as never));
     expect(r.status).toBe(502);

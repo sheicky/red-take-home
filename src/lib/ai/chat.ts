@@ -4,7 +4,7 @@ import { requestFromParams } from "../query";
 import type { Run } from "../run";
 import type { Assessment, AssessmentRequest } from "../types";
 import { fenced } from "./context";
-import { openaiChat, openaiConfig } from "./openai";
+import { llmChat, llmConfig, upstreamError } from "./llm";
 import { chatSystem } from "./prompts";
 
 export interface Turn { role: "user" | "assistant"; content: string }
@@ -34,7 +34,7 @@ export function chatMessages(a: Assessment, history: Turn[]) {
   ];
 }
 
-/** OpenAI server-sent events in, the text deltas out. Lines may be split across chunks. */
+/** OpenAI-format server-sent events in, the text deltas out. Lines may be split across chunks. */
 export function readDeltas(body: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
   const dec = new TextDecoder();
   const enc = new TextEncoder();
@@ -66,7 +66,7 @@ export async function handleChat(
   body: { from?: string; to?: string; date?: string; messages?: unknown },
   deps: { assessment: (req: AssessmentRequest) => Promise<Run>; fetchImpl: typeof fetch; signal?: AbortSignal },
 ): Promise<Response> {
-  if (!openaiConfig().key) return fail(503, "Chat is unavailable: OPENAI_API_KEY is not set on the server.");
+  if (!llmConfig().key) return fail(503, "Chat is unavailable: OPENROUTER_API_KEY is not set on the server.");
   const req = requestFromParams({ from: body?.from, to: body?.to, date: body?.date });
   if (!req) return fail(400, "from, to and date are required.");
   const bad = validateHistory(body.messages);
@@ -78,10 +78,10 @@ export async function handleChat(
   const signal = AbortSignal.any([AbortSignal.timeout(60_000), ...(deps.signal ? [deps.signal] : [])]);
   let res: Response;
   try {
-    res = await openaiChat({ stream: true, messages: chatMessages(run.assessment, body.messages as Turn[]) }, deps.fetchImpl, signal);
+    res = await llmChat({ stream: true, messages: chatMessages(run.assessment, body.messages as Turn[]) }, deps.fetchImpl, signal);
   } catch (e) {
-    return fail(502, `OpenAI unavailable: ${(e as Error).message}`);
+    return fail(502, `The model is unavailable: ${(e as Error).message}`);
   }
-  if (!res.ok || !res.body) return fail(502, `OpenAI ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok || !res.body) return fail(502, `The model did not answer (${await upstreamError(res)}).`);
   return new Response(readDeltas(res.body), { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
 }
