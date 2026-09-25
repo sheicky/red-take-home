@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { searchAirports } from "./search";
+import { popularAirports, searchAirports } from "./search";
 
 const codes = (q: string) => searchAirports(q).map((h) => h.iata);
 
@@ -14,4 +14,10 @@ describe("airport search", () => {
     expect(codes("ORD")).not.toContain("GRR");
   });
   it("returns nothing for nonsense", () => expect(codes("xyzq")).toEqual([]));
+  it("an empty field suggests the busiest airports", () => {
+    const top = popularAirports().map((h) => h.iata);
+    expect(top).toHaveLength(8);
+    expect(top).toContain("ATL");
+    expect(codes("")).toEqual([]);
+  });
 });

@@ -14,6 +14,11 @@ export interface AirportHit {
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 
+/** What an empty field suggests: the busiest airports (loadAirports is sorted by departures). */
+export function popularAirports(limit = 8): AirportHit[] {
+  return loadAirports().slice(0, limit).map((a) => ({ iata: a.iata, name: a.name, city: a.city, state: a.state, metro: metroOf(a.iata)?.name }));
+}
+
 export function searchAirports(q: string, limit = 8): AirportHit[] {
   const query = norm(q);
   if (!query) return [];

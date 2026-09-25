@@ -1,6 +1,8 @@
-import { searchAirports } from "@/lib/search";
+import { popularAirports, searchAirports } from "@/lib/search";
 
+/** ?q=boston searches; ?popular=1 lists the busiest airports, for an empty field. */
 export async function GET(request: Request) {
-  const q = new URL(request.url).searchParams.get("q") ?? "";
-  return Response.json(searchAirports(q));
+  const p = new URL(request.url).searchParams;
+  if (p.get("popular")) return Response.json(popularAirports());
+  return Response.json(searchAirports(p.get("q") ?? ""));
 }

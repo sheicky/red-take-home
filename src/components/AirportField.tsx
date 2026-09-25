@@ -22,6 +22,7 @@ export function AirportField({ label, value, onChange }: { label: string; value:
   const [active, setActive] = useState(0);
   const typed = useRef(false);
   const report = useRef(onChange);
+  const closing = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => { report.current = onChange; });
 
   useEffect(() => {
@@ -29,10 +30,12 @@ export function AirportField({ label, value, onChange }: { label: string; value:
   }, [value]);
 
   useEffect(() => {
-    if (!typed.current || !text.trim()) return;
+    if (!typed.current) return;
     const ctl = new AbortController();
     const t = setTimeout(() => {
-      fetch(`/api/airports?q=${encodeURIComponent(text)}`, { signal: ctl.signal })
+      // Empty field: the busiest airports, so there is always something to pick from.
+      const url = text.trim() ? `/api/airports?q=${encodeURIComponent(text)}` : "/api/airports?popular=1";
+      fetch(url, { signal: ctl.signal })
         .then((r) => r.json())
         .then((h: AirportHit[]) => {
           setHits(h); setActive(0); setOpen(true);
@@ -64,8 +67,16 @@ export function AirportField({ label, value, onChange }: { label: string; value:
         placeholder="City or code"
         value={text}
         onChange={(e) => { typed.current = true; setText(e.target.value); onChange(""); }}
-        onFocus={() => hits.length > 0 && typed.current && setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 120)}
+        onFocus={(e) => {
+          // Select the prefilled code, so typing replaces it instead of appending to it.
+          e.target.select();
+          clearTimeout(closing.current); // a quick blur-then-focus must not close the fresh list
+          if (!text.trim()) {
+            typed.current = true;
+            fetch("/api/airports?popular=1").then((r) => r.json()).then((h: AirportHit[]) => { setHits(h); setActive(0); setOpen(true); }).catch(() => {});
+          } else if (hits.length > 0 && typed.current) setOpen(true);
+        }}
+        onBlur={() => { closing.current = setTimeout(() => setOpen(false), 120); }}
         onKeyDown={(e) => {
           if (!open || !hits.length) return;
           if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(hits.length - 1, a + 1)); }
