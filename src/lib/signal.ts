@@ -21,20 +21,21 @@ const all = (re: RegExp, s: string) => [...s.matchAll(re)].map((m) => Number(m[1
 /** Weather sentences name several conditions; the tile keeps the one that disrupts most. */
 function weather(s: string): Omit<Signal, "basis"> {
   const cause =
-    /snow|blizzard|\bSN\b/i.test(s) ? "Snow"
-    : /thunder|\bTS/.test(s) ? "Storms"
-    : /freezing|FZRA|FZDZ/.test(s) ? "Freezing rain"
-    : /IFR|ceiling|visibility/.test(s) ? "Low cloud"
+    /snow|blizzard/i.test(s) ? "Snow"
+    : /thunder/i.test(s) ? "Storms"
+    : /freezing|ice pellets|sleet/i.test(s) ? "Freezing rain"
+    : /cloud/i.test(s) ? "Low cloud"
+    : /fog/i.test(s) ? "Fog"
     : /wind|gust|shear/i.test(s) ? "Wind"
     : "Weather";
-  const gusts = all(/gust(?:ing|s)? (\d+) kt/g, s);
-  const mph = all(/wind up to (\d+) mph/g, s);
-  const ceilings = all(/\((\d+) ft,/g, s);
+  const gustMph = all(/gusts of \d+ kt \((\d+) mph\)/g, s);
+  const windMph = [...all(/steady wind of \d+ kt \((\d+) mph\)/g, s), ...all(/wind up to (\d+) mph/g, s)];
+  const ceilings = all(/cloud base (\d+) ft/g, s);
   const metric =
-    cause === "Low cloud" && ceilings.length ? `${Math.min(...ceilings)} ft`
-    : gusts.length ? `gusts ${Math.max(...gusts)} kt`
-    : mph.length ? `${Math.max(...mph)} mph`
-    : ceilings.length ? `${Math.min(...ceilings)} ft`
+    cause === "Low cloud" && ceilings.length ? `cloud at ${Math.min(...ceilings)} ft`
+    : gustMph.length ? `gusts ${Math.max(...gustMph)} mph`
+    : windMph.length ? `wind ${Math.max(...windMph)} mph`
+    : ceilings.length ? `cloud at ${Math.min(...ceilings)} ft`
     : undefined;
   return metric ? { cause, metric } : { cause };
 }
@@ -56,7 +57,7 @@ function parse(source: SourceId | undefined, s: string): Omit<Signal, "basis"> {
       return { cause: "FAA program" };
     }
     case "nws-alerts":
-      return { cause: /^(.+?) in effect/.exec(s)?.[1] ?? "NWS alert" };
+      return { cause: /has an? (.+?) in effect/.exec(s)?.[1] ?? "NWS alert" };
     case "bts-route": {
       if (/^No regular nonstop/.test(s)) return { cause: "No nonstop" };
       const late = /(\d+%) late/.exec(s)?.[1];
@@ -75,6 +76,25 @@ export function signalOf(f: Factor, evidence: Evidence[]): Signal {
   const source = evidence.find((e) => e.id === f.evidence[0])?.source;
   return { ...parse(source, f.summary), basis: source ? BASIS[source] : "Rule" };
 }
+
+/** One plain sentence per cause: what it does to a flight. Shown under the numbers, never scored. */
+const IMPACT: Record<string, string> = {
+  Wind: "Strong wind slows takeoffs and landings, and can shut a runway.",
+  "Low cloud": "In low cloud, planes land further apart, so fewer flights get in each hour.",
+  Fog: "In fog, planes land further apart, so fewer flights get in each hour.",
+  Storms: "Storms stop work on the ramp and close flight paths. Delays spread fast.",
+  Snow: "Every plane needs de-icing and runways need clearing. Expect waits.",
+  "Freezing rain": "Every plane needs de-icing before takeoff. Expect waits.",
+  "Ground delay": "Flights to this airport wait at their departure gate until a landing slot opens.",
+  "Ground stop": "Flights to this airport cannot leave until the stop ends.",
+  "Arrival delays": "Planes are landing late here, which pushes back the flights that use them next.",
+  "Departure delays": "Flights are leaving this airport late right now.",
+  Closed: "No flights in or out while the airport is closed.",
+  "No nonstop": "A connection means a second airport, and a chance to miss the next flight.",
+  "Often late": "On this route, flights in this month were late more often than average.",
+};
+export const impactOf = (cause: string): string | undefined =>
+  IMPACT[cause] ?? (/warning|advisory|watch/i.test(cause) ? "The weather service expects conditions bad enough to warn the public. Airlines often allow free changes." : undefined);
 
 export interface SignalGroup {
   cause: string;

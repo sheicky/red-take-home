@@ -109,6 +109,9 @@ export function parseMetars(json: unknown[]): Metar[] {
 // A real deployment would hold a per-airport table built with each airport's arrival rates.
 const LOW_CEILING_SENSITIVE: Record<string, number> = { KSFO: 3000 };
 
+/** Knots are what forecasts use; mph is what travelers read. Both, so neither side has to convert. */
+export const knots = (kt: number) => `${kt} kt (${Math.round(kt * 1.15078)} mph)`;
+
 export interface ConditionHit {
   level: Level;
   why: string;
@@ -121,24 +124,27 @@ export interface ConditionHit {
 export function conditionHits(icao: string, c: Omit<TafGroup, "from" | "to" | "change" | "probability">): ConditionHit[] {
   const hits: ConditionHit[] = [];
   const wx = c.wx ?? "";
-  if (/TS/.test(wx)) hits.push({ level: "HIGH", why: `thunderstorms (${wx})` });
-  if (/FZRA|FZDZ|PL/.test(wx)) hits.push({ level: "HIGH", why: `freezing precipitation (${wx}): de-icing, reduced rates` });
-  else if (/\+SN|BLSN/.test(wx)) hits.push({ level: "HIGH", why: `heavy / blowing snow (${wx})` });
-  else if (/SN/.test(wx)) hits.push({ level: "MODERATE", why: `snow (${wx}): de-icing delays likely` });
-  if (c.wgst !== undefined && c.wgst >= 35) hits.push({ level: "HIGH", why: `gusts ${c.wgst} kt` });
-  else if (c.wspd !== undefined && c.wspd >= 30) hits.push({ level: "HIGH", why: `sustained wind ${c.wspd} kt` });
-  else if ((c.wgst ?? 0) >= 30 || (c.wspd ?? 0) >= 22) hits.push({ level: "MODERATE", why: `wind ${c.wspd ?? "?"} kt gusting ${c.wgst ?? "-"} kt` });
+  if (/TS/.test(wx)) hits.push({ level: "HIGH", why: "thunderstorms" });
+  if (/FZRA|FZDZ|PL/.test(wx)) hits.push({ level: "HIGH", why: "freezing rain or ice pellets, so every plane needs de-icing" });
+  else if (/\+SN|BLSN/.test(wx)) hits.push({ level: "HIGH", why: "heavy or blowing snow" });
+  else if (/SN/.test(wx)) hits.push({ level: "MODERATE", why: "snow, so planes need de-icing" });
+  if (c.wgst !== undefined && c.wgst >= 35) hits.push({ level: "HIGH", why: `gusts of ${knots(c.wgst)}` });
+  else if (c.wspd !== undefined && c.wspd >= 30) hits.push({ level: "HIGH", why: `steady wind of ${knots(c.wspd)}` });
+  else if ((c.wgst ?? 0) >= 30 || (c.wspd ?? 0) >= 22) {
+    hits.push({ level: "MODERATE", why: c.wgst !== undefined ? `gusts of ${knots(c.wgst)}` : `steady wind of ${knots(c.wspd!)}` });
+  }
   // Seen live in the JFK TAF on 2026-09-25: "WS020/01050KT" — 50 kt at 2,000 ft. Crews go around
   // or divert on approach in shear; airports cut arrival rates.
-  if (c.shearKt !== undefined) hits.push({ level: "MODERATE", why: `low-level wind shear forecast (${c.shearKt} kt at ${c.shearFt ?? "?"} ft)` });
+  if (c.shearKt !== undefined) hits.push({ level: "MODERATE", why: `wind shear: ${knots(c.shearKt)} of wind ${c.shearFt ?? "?"} ft above the runway, where planes are landing` });
   const vis = c.visib;
   const ceil = c.ceiling;
+  const seeing = [ceil !== undefined && `cloud base ${ceil} ft`, vis !== undefined && `visibility ${vis} ${vis === 1 ? "mile" : "miles"}`].filter(Boolean).join(", ");
   if ((ceil !== undefined && ceil < 500) || (vis !== undefined && vis < 1)) {
-    hits.push({ level: "HIGH", why: `very low ceiling/visibility (${ceil ?? "?"} ft, ${vis ?? "?"} SM), arrival rates cut` });
+    hits.push({ level: "HIGH", why: `very low cloud or fog (${seeing})` });
   } else if ((ceil !== undefined && ceil < 1000) || (vis !== undefined && vis < 3)) {
-    hits.push({ level: "MODERATE", why: `IFR conditions (${ceil ?? "?"} ft, ${vis ?? "?"} SM)` });
+    hits.push({ level: "MODERATE", why: `low cloud (${seeing})` });
   } else if (ceil !== undefined && LOW_CEILING_SENSITIVE[icao] && ceil < LOW_CEILING_SENSITIVE[icao]) {
-    hits.push({ level: "MODERATE", why: `ceiling ${ceil} ft: below ~${LOW_CEILING_SENSITIVE[icao]} ft this airport loses parallel approaches` });
+    hits.push({ level: "MODERATE", why: `low cloud (cloud base ${ceil} ft): below about ${LOW_CEILING_SENSITIVE[icao]} ft this airport can no longer land planes side by side` });
   }
   return hits;
 }

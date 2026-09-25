@@ -26,7 +26,14 @@ export class EvidenceBook {
   }
 }
 
-const hhmm = (d: Date, tz: string) => d.toLocaleTimeString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false });
+/** "5 am", "11:30 pm": how a traveler reads a clock. */
+const clock = (d: Date, tz: string) =>
+  d.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true }).replace(":00", "").replace(/\s?([AP])M/, (_, x) => ` ${x.toLowerCase()}m`);
+/** "5 to 8 am", "11 am to 8 pm". */
+const span = (a: Date, b: Date, tz: string) => {
+  const [x, y] = [clock(a, tz), clock(b, tz)];
+  return x.slice(-2) === y.slice(-2) ? `${x.slice(0, -3)} to ${y}` : `${x} to ${y}`;
+};
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 const uniq = <T>(xs: T[]) => [...new Set(xs)];
 
@@ -112,16 +119,16 @@ export function tafRules(book: EvidenceBook, taf: Taf | undefined, w: Window, si
   for (const g of taf.groups) {
     if (!overlaps(g.from, g.to, from, to)) continue;
     // A PROB group is a possibility (typically 30–40%): one level down. TEMPO = expected at times.
-    const range = `${hhmm(g.from < from ? from : g.from, w.tz)}–${hhmm(g.to > to ? to : g.to, w.tz)}`;
+    const range = span(g.from < from ? from : g.from, g.to > to ? to : g.to, w.tz);
     for (const h of conditionHits(icao, g)) {
       const l = g.change === "PROB" ? lowerLevel(h.level) : h.level;
       level = maxLevel(level, l);
       if (l === "LOW") continue;
-      const why = `${h.why}${g.change === "PROB" ? ` (${g.probability ?? ""}% chance)` : g.change === "TEMPO" ? " (at times)" : ""}`;
+      const why = `${h.why}${g.change === "PROB" ? `, ${g.probability ?? "some"}% chance,` : g.change === "TEMPO" ? ", at times," : ""}`;
       byRange.set(range, uniq([...(byRange.get(range) ?? []), why]));
     }
   }
-  const whys = [...byRange].map(([r, ws]) => `${r} local, ${ws.join(", ")}`);
+  const whys = [...byRange].map(([r, ws]) => `${ws.join(", ")} from ${r}`);
   const id = book.add({
     source: "taf", airport: w.airport,
     title: `TAF ${icao}${partial ? " (covers part of the window)" : ""}`,
@@ -130,7 +137,7 @@ export function tafRules(book: EvidenceBook, taf: Taf | undefined, w: Window, si
   if (levelRank(level) > 0) {
     book.factor({
       level, side, airport: w.airport, evidence: [id],
-      summary: `Airport forecast for ${w.airport} during the day: ${uniq(whys).slice(0, 3).join("; ")}.`,
+      summary: `Airport forecast for ${w.airport} (local time): ${uniq(whys).slice(0, 3).join("; ")}.`,
       action: level === "HIGH" ? `Weather at ${w.airport} is likely to cut capacity. Consider an earlier flight or build a buffer.` : undefined,
     });
   }
@@ -179,7 +186,7 @@ export function forecastRules(book: EvidenceBook, periods: ForecastPeriod[], w: 
       if (!ids.includes(id)) ids.push(id);
     }
   }
-  if (level !== "LOW") book.factor({ level, side, airport: w.airport, evidence: ids, summary: `Forecast for ${w.airport}: ${uniq(whys).slice(0, 3).join("; ")}.` });
+  if (level !== "LOW") book.factor({ level, side, airport: w.airport, evidence: ids, summary: `Weather service forecast for ${w.airport}. ${uniq(whys).slice(0, 3).join(". ")}.` });
   return true;
 }
 
@@ -195,7 +202,7 @@ export function alertRules(book: EvidenceBook, alerts: Alert[], w: Window, side:
     });
     if (level && level !== "LOW") {
       book.factor({
-        level, side, airport: w.airport, evidence: [id], summary: `${a.event} in effect at ${w.airport} during the travel window.`,
+        level, side, airport: w.airport, evidence: [id], summary: `The weather service has a ${a.event} in effect for the ${w.airport} area on the travel day.`,
         action: level === "HIGH" ? `Check the airline's travel-waiver page for ${w.airport}: free changes are usually offered ahead of a ${a.event.toLowerCase()}.` : undefined,
       });
     }

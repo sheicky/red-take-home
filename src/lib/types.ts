@@ -89,6 +89,7 @@ export interface Alternate {
   side: "origin" | "destination";
   airport: string;
   name: string;
+  city: string;
   level: Level;
   reasons: string[];
   routeOnTime?: number; // historical on-time share for the alternate pair, if BTS has it

@@ -176,7 +176,7 @@ export async function assess(req: AssessmentRequest, provider: Provider): Promis
       const hist = bts.routes[pair]?.[String(month)];
       const onTime = hist ? 1 - (hist[0] - hist[2] - hist[3] > 0 ? hist[1] / (hist[0] - hist[2] - hist[3]) : 0) : undefined;
       alternates.push({
-        side, airport: alt.iata, name: alt.name, level,
+        side, airport: alt.iata, name: alt.name, city: alt.city, level,
         reasons: scratch.factors.length ? scratch.factors.map((f) => f.summary) : [faa || t ? "No program or adverse forecast found." : "No live data for this date. History only."],
         routeOnTime: onTime,
       });

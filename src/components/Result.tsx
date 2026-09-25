@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { groupSignals, signalOf, type SignalGroup } from "@/lib/signal";
+import { groupSignals, impactOf, signalOf, type SignalGroup } from "@/lib/signal";
 import type { Alternate, Assessment, Evidence, Factor, Level as LevelT, SourceState } from "@/lib/types";
 import { COLS, RouteHeader } from "./Board";
 import { Cited } from "./Cited";
@@ -59,6 +59,7 @@ function Tile({ g, evidence }: { g: SignalGroup; evidence: Evidence[] }) {
             <Cited text={`${f.summary} [${f.evidence.join(", ")}]`} />
           </li>
         ))}
+        {impactOf(g.cause) && <li className="text-[var(--gris)]">{impactOf(g.cause)}</li>}
       </ul>
     </details>
   );
@@ -67,16 +68,19 @@ function Tile({ g, evidence }: { g: SignalGroup; evidence: Evidence[] }) {
 function Nearby({ alts }: { alts: Alternate[] }) {
   if (!alts.length) return null;
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[13px]">
-      <span className="text-[var(--gris)] mr-1">Nearby</span>
-      {alts.map((x) => (
-        <span key={x.airport} className="inline-flex h-7 items-center gap-1.5 rounded-md border border-[var(--filet)] bg-white px-2" title={`${x.airport}: ${WORD[x.level]}`}>
-          <Swatch l={x.level} />
-          <span className="font-semibold">{x.airport}</span>
-          {x.routeOnTime !== undefined && <span className="text-[var(--gris)]">{Math.round(x.routeOnTime * 100)}% on time</span>}
-          <span className="sr-only">{WORD[x.level]}</span>
-        </span>
-      ))}
+    <div className="mt-3 text-[13px]">
+      <p className="text-[var(--gris)] mb-1.5">{alts[0].side === "origin" ? "Or fly from a nearby airport" : "Or fly into a nearby airport"}</p>
+      <ul className="flex flex-wrap gap-1.5">
+        {alts.map((x) => (
+          <li key={x.airport} className="inline-flex h-7 items-center gap-1.5 rounded-md border border-[var(--filet)] bg-white px-2" title={`${x.name}: ${WORD[x.level].toLowerCase()} risk`}>
+            <Swatch l={x.level} />
+            <span className="font-semibold">{x.airport}</span>
+            <span>{x.city}</span>
+            {x.routeOnTime !== undefined && <span className="text-[var(--gris)]">{Math.round(x.routeOnTime * 100)}% on time</span>}
+            <span className="sr-only">, {WORD[x.level]} risk</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -80,16 +80,21 @@ export interface ForecastHit {
   why: string;
 }
 
+/** "Chance Showers And Thunderstorms" → "chance of showers and thunderstorms": the NWS words, readable. */
+export const plainForecast = (s: string) =>
+  s.toLowerCase().replace(/\b(slight chance|chance)\b(?! of)/g, "$1 of").replace(/\s+/g, " ").trim();
+
 export function forecastHits(p: ForecastPeriod): ForecastHit[] {
   const hits: ForecastHit[] = [];
   const t = `${p.shortForecast}. ${p.detailed}`;
   const slight = /Slight Chance|Isolated/i.test(p.shortForecast);
   const soften = (l: Level): Level => (slight ? (l === "HIGH" ? "MODERATE" : "LOW") : l);
-  if (/severe thunderstorm/i.test(t)) hits.push({ level: soften("HIGH"), why: `severe thunderstorms forecast (“${p.shortForecast}”)` });
-  else if (/thunderstorm|t-storm/i.test(p.shortForecast)) hits.push({ level: soften("MODERATE"), why: `thunderstorms forecast (“${p.shortForecast}”)` });
-  if (/blizzard|heavy snow|freezing rain|ice storm|sleet/i.test(t)) hits.push({ level: soften("HIGH"), why: `winter precipitation (“${p.shortForecast}”)` });
-  else if (/snow/i.test(p.shortForecast)) hits.push({ level: soften("MODERATE"), why: `snow forecast (“${p.shortForecast}”)` });
-  if (/fog/i.test(p.shortForecast)) hits.push({ level: "MODERATE", why: `fog forecast (“${p.shortForecast}”)` });
+  const said = plainForecast(p.shortForecast);
+  if (/severe thunderstorm/i.test(t)) hits.push({ level: soften("HIGH"), why: /thunder/i.test(said) ? `${said}, some severe` : "severe thunderstorms" });
+  else if (/thunderstorm|t-storm/i.test(p.shortForecast)) hits.push({ level: soften("MODERATE"), why: said });
+  if (/blizzard|heavy snow|freezing rain|ice storm|sleet/i.test(t)) hits.push({ level: soften("HIGH"), why: /snow|blizzard|freezing|ice|sleet/i.test(said) ? said : "heavy snow or ice" });
+  else if (/snow/i.test(p.shortForecast)) hits.push({ level: soften("MODERATE"), why: said });
+  if (/fog/i.test(p.shortForecast)) hits.push({ level: "MODERATE", why: said });
   // mph here (NWS), knots in the TAF: 40 mph ≈ 35 kt, 30 mph ≈ 26 kt.
   if ((p.windMaxMph ?? 0) >= 40) hits.push({ level: "HIGH", why: `wind up to ${p.windMaxMph} mph` });
   else if ((p.windMaxMph ?? 0) >= 30) hits.push({ level: "MODERATE", why: `wind up to ${p.windMaxMph} mph` });

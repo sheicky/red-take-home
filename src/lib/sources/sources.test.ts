@@ -102,7 +102,7 @@ describe("TAF / METAR", () => {
     const jfk = parseTafs(JSON.parse(fx("recorded-2026-09-25", "taf.json"))).find((t) => t.icao === "KJFK")!;
     const g = jfk.groups.find((x) => x.shearKt !== undefined)!;
     expect([g.shearKt, g.shearFt]).toEqual([50, 2000]);
-    expect(conditionHits("KJFK", { shearKt: 50, shearFt: 2000 })[0].why).toContain("50 kt at 2000 ft");
+    expect(conditionHits("KJFK", { shearKt: 50, shearFt: 2000 })[0].why).toContain("50 kt (58 mph) of wind 2000 ft above the runway");
   });
 
   it("knows SFO loses capacity well above IFR", () => {
