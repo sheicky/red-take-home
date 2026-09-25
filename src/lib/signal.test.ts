@@ -4,7 +4,7 @@
 
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { assess } from "./assess";
-import { scenarioById } from "./scenarios";
+import { blizzardProvider, replayProvider } from "@/test/providers";
 import { groupSignals, signalOf } from "./signal";
 import type { Evidence, Factor, Level, SourceId } from "./types";
 
@@ -26,7 +26,7 @@ describe("signalOf, one template at a time", () => {
   });
 
   it("ground stop: until when", () => {
-    expect(make("faa", "Ground stop for flights to ORD (snow/ice [SYNTHETIC]): flights bound there are held at their origin until ~11:00 am CST.", "destination", "SEVERE"))
+    expect(make("faa", "Ground stop for flights to ORD (snow/ice [TEST]): flights bound there are held at their origin until ~11:00 am CST.", "destination", "SEVERE"))
       .toEqual({ cause: "Ground stop", metric: "until 11:00 am CST", basis: "FAA" });
   });
 
@@ -91,20 +91,6 @@ describe("signalOf, one template at a time", () => {
     expect(make("bts-route", "No regular nonstop JFK→BOI: a connection adds a second airport and a missed-connection risk this tool does not score.", "route"))
       .toEqual({ cause: "No nonstop", basis: "History" });
   });
-
-  it("flight history and mismatch", () => {
-    expect(make("bts-flight", "This specific flight has a weak record: 40% late, 3.0% cancelled.", "flight"))
-      .toEqual({ cause: "Often late", metric: "40% late", basis: "History" });
-    expect(make("bts-flight", "UA1234 is not known on JFK→SFO. The booking details may be wrong, or it is a connection.", "flight"))
-      .toEqual({ cause: "Not on route", basis: "History" });
-  });
-
-  it("live airline status", () => {
-    expect(make("aviationstack", "The airline reports DL679 delayed, 45 min late.", "flight"))
-      .toEqual({ cause: "Delayed", metric: "45 min late", basis: "Airline" });
-    expect(make("aviationstack", "The airline reports DL679 cancelled.", "flight", "SEVERE"))
-      .toEqual({ cause: "Cancelled", basis: "Airline" });
-  });
 });
 
 describe("groupSignals", () => {
@@ -140,15 +126,14 @@ describe("signalOf over the real pipeline", () => {
   beforeAll(() => { vi.stubEnv("OPENAI_API_KEY", ""); });
 
   const runs = [
-    { origin: "JFK", destination: "SFO", date: "2026-09-25", scenario: "recorded-2026-09-25" },
-    { origin: "JFK", destination: "SFO", date: "2026-09-25", flight: "DL 679", scenario: "recorded-2026-09-25" },
-    { origin: "JFK", destination: "SFO", date: "2026-09-25", flight: "UA1234", scenario: "recorded-2026-09-25" },
-    { origin: "BOS", destination: "ORD", date: "2027-01-14", scenario: "synthetic-blizzard" },
+    { req: { origin: "JFK", destination: "SFO", date: "2026-09-25" }, provider: replayProvider },
+    { req: { origin: "JFK", destination: "SFO", date: "2026-09-26" }, provider: replayProvider },
+    { req: { origin: "BOS", destination: "ORD", date: "2027-01-14" }, provider: blizzardProvider },
   ];
 
-  for (const r of runs) {
-    it(`every factor gets a short cause (${r.origin}→${r.destination}${r.flight ? ` ${r.flight}` : ""})`, async () => {
-      const a = await assess(r, scenarioById(r.scenario)!.provider());
+  for (const { req, provider } of runs) {
+    it(`every factor gets a short cause (${req.origin}→${req.destination} ${req.date})`, async () => {
+      const a = await assess(req, provider());
       expect(a.factors.length).toBeGreaterThan(0);
       for (const f of a.factors) {
         const s = signalOf(f, a.evidence);

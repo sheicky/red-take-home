@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysBetween, horizonFor, localDate, zonedInstant, btsTime } from "./time";
+import { daysBetween, horizonFor, localDate, zonedInstant } from "./time";
 import { guardDraft } from "./narrate";
 import { btsRouteRules, EvidenceBook, faaRules } from "./rules";
 import type { FaaSnapshot } from "./sources/faa";
@@ -16,12 +16,6 @@ describe("dates are local to the origin airport", () => {
     expect(zonedInstant("2026-07-01", "08:00", "America/Los_Angeles").toISOString()).toBe("2026-07-01T15:00:00.000Z");
     expect(zonedInstant("2026-12-01", "08:00", "America/Los_Angeles").toISOString()).toBe("2026-12-01T16:00:00.000Z");
     expect(zonedInstant("2026-03-08", "12:00", "America/New_York").toISOString()).toBe("2026-03-08T16:00:00.000Z");
-  });
-
-  it("reads BTS hhmm times", () => {
-    expect(btsTime("745")).toBe("07:45");
-    expect(btsTime("2400")).toBe("23:59");
-    expect(btsTime("")).toBeUndefined();
   });
 
   it("counts calendar days", () => {

@@ -130,7 +130,7 @@ export function tafRules(book: EvidenceBook, taf: Taf | undefined, w: Window, si
   if (levelRank(level) > 0) {
     book.factor({
       level, side, airport: w.airport, evidence: [id],
-      summary: `Airport forecast for ${w.airport} during the ${w.basis === "scheduled-time" ? "scheduled time" : "day"}: ${uniq(whys).slice(0, 3).join("; ")}.`,
+      summary: `Airport forecast for ${w.airport} during the day: ${uniq(whys).slice(0, 3).join("; ")}.`,
       action: level === "HIGH" ? `Weather at ${w.airport} is likely to cut capacity. Consider an earlier flight or build a buffer.` : undefined,
     });
   }
@@ -141,17 +141,16 @@ export function metarRules(book: EvidenceBook, metar: Metar | undefined, w: Wind
   if (!metar) return;
   const ageMin = Math.round((now.getTime() - metar.observed.getTime()) / 60000);
   const hits = conditionHits(metar.icao, metar.cond);
-  // An observation describes NOW. It only scores if the flight is within the next ~3 h — and
-  // at the destination only when the arrival time is known (whole-day windows would make a
-  // morning fog at SFO count against a flight landing at 9 pm).
-  const soon = new Date(w.from).getTime() - now.getTime() < 3 * 3600_000 && new Date(w.to) > now
-    && (side !== "destination" || w.basis === "scheduled-time");
+  // An observation describes NOW. It only scores at the origin, and only if the travel window
+  // starts within ~3 h. At the destination the arrival time is unknown: a morning fog at SFO
+  // must not count against a flight landing at 9 pm. The TAF covers the destination's day.
+  const soon = side === "origin" && new Date(w.from).getTime() - now.getTime() < 3 * 3600_000 && new Date(w.to) > now;
   const id = book.add({
     source: "metar", airport: w.airport, title: `Current observation ${metar.icao} (${ageMin} min old)`,
     detail: metar.raw, observedAt: metar.observed.toISOString(), url: URLS.tafHuman(metar.icao),
     ignoredBecause: soon ? undefined
-      : side === "destination" && w.basis === "whole-day"
-        ? "current conditions at the destination; arrival time unknown (give a flight number); the TAF covers the day"
+      : side === "destination"
+        ? "current conditions at the destination; the arrival time is unknown and the TAF covers the day"
         : "observation is current conditions; the flight window is more than 3 h away (TAF covers it)",
   });
   if (!soon) return;
@@ -247,16 +246,4 @@ export function btsRouteRules(
     book.factor({ level: "MODERATE", side: "route", evidence: [id], summary: `Historically fragile in ${mname}: ${pct(dr)} late, ${(cr * 100).toFixed(1)}% cancelled vs ${pct(nd)} / ${(nc * 100).toFixed(1)}% nationally.` });
   }
   return "ok";
-}
-
-export function btsFlightRules(book: EvidenceBook, key: string, s: Stats, o: string, d: string, dep: string | undefined, window: string) {
-  const dr = delayRate(s), cr = cancelRate(s);
-  const id = book.add({
-    source: "bts-flight", title: `${key} ${o}→${d}: ${pct(1 - dr)} on time`,
-    detail: `${s[0]} operations (${window})${dep ? `, usually departs ${dep}` : ""}: ${pct(dr)} arrived 15+ min late, ${(cr * 100).toFixed(1)}% cancelled.`,
-    url: URLS.bts,
-  });
-  if (s[0] >= 30 && (dr >= 0.35 || cr >= 0.04)) {
-    book.factor({ level: "MODERATE", side: "flight", evidence: [id], summary: `This specific flight has a weak record: ${pct(dr)} late, ${(cr * 100).toFixed(1)}% cancelled.` });
-  }
 }

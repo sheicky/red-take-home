@@ -59,7 +59,7 @@ export async function narrate(a: Omit<Assessment, "narrative">, fetchImpl: typeo
 
   // The model sees only the rules' output, trimmed to what a writer needs.
   const brief = {
-    trip: { from: `${a.origin.iata} (${a.origin.city})`, to: `${a.destination.iata} (${a.destination.city})`, date: a.request.date, flight: a.flight?.normalized, daysAhead: a.horizon.daysAhead },
+    trip: { from: `${a.origin.iata} (${a.origin.city})`, to: `${a.destination.iata} (${a.destination.city})`, date: a.request.date, daysAhead: a.horizon.daysAhead },
     level: a.level,
     confidence: a.confidence,
     factors: a.factors.map((f) => ({ level: f.level, where: f.airport ?? f.side, summary: f.summary, evidence: f.evidence })),

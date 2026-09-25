@@ -1,6 +1,6 @@
 // The one seam between the rules and the outside world.
-// Live mode hits the public APIs; scenario mode replays recorded or synthetic payloads.
-// Every source module takes a Provider, so the whole pipeline runs offline in tests and demos.
+// Live mode hits the public APIs; tests replay payloads captured from those same APIs.
+// Every source module takes a Provider, so the whole pipeline runs offline in tests.
 
 export interface NwsPoint {
   forecastUrl: string;
@@ -16,9 +16,6 @@ export interface Provider {
   nwsPoint(lat: number, lon: number): Promise<NwsPoint>;
   nwsForecast(url: string): Promise<unknown>;
   nwsAlerts(lat: number, lon: number): Promise<unknown>;
-  adsbdbCallsign(callsign: string): Promise<unknown>;
-  /** Optional paid-tier-free enrichment; null when no key is configured. */
-  aviationstack: ((flightIata: string) => Promise<unknown>) | null;
 }
 
 export const URLS = {
@@ -30,9 +27,7 @@ export const URLS = {
   nwsPoint: (lat: number, lon: number) => `https://api.weather.gov/points/${lat.toFixed(4)},${lon.toFixed(4)}`,
   nwsAlerts: (lat: number, lon: number) => `https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`,
   nwsHuman: (lat: number, lon: number) => `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}`,
-  adsbdb: (cs: string) => `https://api.adsbdb.com/v0/callsign/${cs}`,
   bts: "https://www.transtats.bts.gov/Fields.asp?gnoyr_VQ=FGJ",
-  aviationstack: "https://aviationstack.com/documentation",
 };
 
 // api.weather.gov answers 403 without a User-Agent (checked 2026-09-25). They ask for a contact in it.
@@ -76,19 +71,4 @@ export const liveProvider: Provider = {
   nwsForecast: (url) => cached(`fc:${url}`, 15 * MIN, async () => (await get(url, "application/geo+json")).json()),
   nwsAlerts: (lat, lon) =>
     cached(`al:${lat},${lon}`, 5 * MIN, async () => (await get(URLS.nwsAlerts(lat, lon), "application/geo+json")).json()),
-  adsbdbCallsign: (cs) => cached(`adsb:${cs}`, 60 * MIN, async () => (await get(URLS.adsbdb(cs))).json()),
-  aviationstack: process.env.AVIATIONSTACK_KEY
-    ? (flightIata) =>
-        cached(`as:${flightIata}`, 10 * MIN, async () => {
-          const key = process.env.AVIATIONSTACK_KEY!;
-          // The free plan historically served plain HTTP only; the base is configurable for that reason.
-          const base = process.env.AVIATIONSTACK_BASE || "https://api.aviationstack.com";
-          const r = await fetch(`${base}/v1/flights?access_key=${key}&flight_iata=${flightIata}`, {
-            signal: AbortSignal.timeout(TIMEOUT_MS),
-          });
-          const j = await r.json();
-          if (j.error) throw new Error(`aviationstack: ${j.error.code ?? j.error.type ?? "error"}`);
-          return j;
-        })
-    : null,
 };

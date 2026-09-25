@@ -180,8 +180,7 @@ export function Result({ a }: { a: Assessment }) {
   const tooEarly = a.confidence.level === "VERY_LOW" && a.factors.length === 0;
   const sorted = [...a.factors].sort((x, y) => RANK[y.level] - RANK[x.level]);
   const side = (s: Factor["side"][]) => sorted.filter((f) => s.includes(f.side));
-  const [o, d, mid] = [side(["origin"]), side(["destination"]), side(["route", "flight"])];
-  const sched = a.windows[0]?.basis === "scheduled-time";
+  const [o, d, mid] = [side(["origin"]), side(["destination"]), side(["route"])];
   const empty = tooEarly ? "No live data this far out" : "Nothing reported";
   const days = a.horizon.daysAhead;
 
@@ -191,13 +190,6 @@ export function Result({ a }: { a: Assessment }) {
 
   return (
     <article className="space-y-10">
-      {(a.scenario || a.adjustments.length > 0) && (
-        <div className="space-y-1 text-[14px]">
-          {a.scenario && <p className="font-medium" style={{ color: a.scenario.synthetic ? "var(--severe)" : "var(--gris)" }}>{a.scenario.synthetic ? "Invented data" : a.scenario.label}</p>}
-          {a.adjustments.map((x) => <p key={x} className="max-w-[68ch]">{x}</p>)}
-        </div>
-      )}
-
       <section aria-label="Verdict" className="space-y-6">
         <RouteHeader
           origin={a.origin.iata}
@@ -207,15 +199,15 @@ export function Result({ a }: { a: Assessment }) {
           center={verdict}
           below={<>
             <span className="block">{tooEarly ? "History only" : CONF[a.confidence.level]}</span>
-            <span className="block">{shortDate(a.request.date)}, {days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`}{a.flight ? `, ${a.flight.normalized}` : ""}</span>
+            <span className="block">{shortDate(a.request.date)}, {days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`}</span>
           </>}
-          dep={sched && a.flight?.scheduledDeparture ? `Dep ${a.flight.scheduledDeparture}` : <span className="text-[var(--gris)] font-normal">{a.origin.city}</span>}
-          arr={sched && a.flight?.scheduledArrival ? `Arr ${a.flight.scheduledArrival}` : <span className="text-[var(--gris)] font-normal">{a.destination.city}</span>}
+          dep={<span className="text-[var(--gris)] font-normal">{a.origin.city}</span>}
+          arr={<span className="text-[var(--gris)] font-normal">{a.destination.city}</span>}
         />
 
         <div className={`${COLS} gap-y-6`}>
           <Column code={a.origin.iata} factors={o} evidence={a.evidence} alts={a.alternates.filter((x) => x.side === "origin")} empty={empty} className="col-span-2 sm:col-span-1" />
-          <Column code={a.flight?.normalized ?? "Route"} factors={mid} evidence={a.evidence} alts={[]} empty="" className={`col-span-2 sm:col-span-1 sm:order-none order-last ${mid.length ? "" : "hidden sm:block sm:invisible"}`} />
+          <Column code="Route" factors={mid} evidence={a.evidence} alts={[]} empty="" className={`col-span-2 sm:col-span-1 sm:order-none order-last ${mid.length ? "" : "hidden sm:block sm:invisible"}`} />
           <Column code={a.destination.iata} factors={d} evidence={a.evidence} alts={a.alternates.filter((x) => x.side === "destination")} empty={empty} className="col-span-2 sm:col-span-1" />
         </div>
       </section>

@@ -1,20 +1,13 @@
 import { assess, InputError } from "./assess";
-import { liveProvider } from "./provider";
-import { scenarioById } from "./scenarios";
+import { liveProvider, type Provider } from "./provider";
 import type { Assessment, AssessmentRequest } from "./types";
 
 export type Run = { ok: true; assessment: Assessment } | { ok: false; status: 400 | 500; error: string };
 
-/** Server-only entry shared by the page and the API route: API keys never reach the browser. */
-export async function runAssessment(req: AssessmentRequest): Promise<Run> {
-  const sc = req.scenario ? scenarioById(req.scenario) : undefined;
-  if (req.scenario && !sc) return { ok: false, status: 400, error: `Unknown scenario "${req.scenario}".` };
+/** Server-only entry shared by the page, the API route and the chat: API keys never reach the browser. */
+export async function runAssessment(req: AssessmentRequest, provider: Provider = liveProvider): Promise<Run> {
   try {
-    const assessment = await assess(
-      { origin: req.origin.toUpperCase(), destination: req.destination.toUpperCase(), date: req.date, flight: req.flight || undefined, scenario: req.scenario },
-      sc ? sc.provider() : liveProvider,
-      sc ? { id: sc.id, label: sc.label, synthetic: sc.synthetic, recordedAt: sc.recordedAt } : undefined,
-    );
+    const assessment = await assess({ origin: req.origin.toUpperCase(), destination: req.destination.toUpperCase(), date: req.date }, provider);
     return { ok: true, assessment };
   } catch (e) {
     if (e instanceof InputError) return { ok: false, status: 400, error: e.message };

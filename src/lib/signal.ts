@@ -14,9 +14,6 @@ const BASIS: Record<SourceId, string> = {
   "nws-forecast": "NWS forecast",
   "nws-alerts": "NWS alert",
   "bts-route": "History",
-  "bts-flight": "History",
-  adsbdb: "Filed route",
-  aviationstack: "Airline",
 };
 
 const all = (re: RegExp, s: string) => [...s.matchAll(re)].map((m) => Number(m[1]));
@@ -60,19 +57,10 @@ function parse(source: SourceId | undefined, s: string): Omit<Signal, "basis"> {
     }
     case "nws-alerts":
       return { cause: /^(.+?) in effect/.exec(s)?.[1] ?? "NWS alert" };
-    case "bts-route":
-    case "bts-flight":
-    case "adsbdb": {
+    case "bts-route": {
       if (/^No regular nonstop/.test(s)) return { cause: "No nonstop" };
-      if (/is not known on/.test(s)) return { cause: "Not on route" };
       const late = /(\d+%) late/.exec(s)?.[1];
       return late ? { cause: "Often late", metric: `${late} late` } : { cause: "History" };
-    }
-    case "aviationstack": {
-      const m = /reports \S+ (\w+)(?:, (\d+ min late))?/.exec(s);
-      if (!m) return { cause: "Airline status" };
-      const cause = m[1][0].toUpperCase() + m[1].slice(1);
-      return m[2] ? { cause, metric: m[2] } : { cause };
     }
     default:
       return weather(s);
@@ -80,7 +68,7 @@ function parse(source: SourceId | undefined, s: string): Omit<Signal, "basis"> {
 }
 
 /**
- * Reads the summary the rules wrote. Coupled to the wording in rules.ts and assess.ts on purpose:
+ * Reads the summary the rules wrote. Coupled to the wording in rules.ts on purpose:
  * signal.test.ts runs the real pipeline, so a rewording there fails the build instead of the page.
  */
 export function signalOf(f: Factor, evidence: Evidence[]): Signal {

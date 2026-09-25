@@ -15,12 +15,9 @@ export type SourceId =
   | "taf"
   | "nws-forecast"
   | "nws-alerts"
-  | "bts-route"
-  | "bts-flight"
-  | "adsbdb"
-  | "aviationstack";
+  | "bts-route";
 
-export type Side = "origin" | "destination" | "route" | "flight";
+export type Side = "origin" | "destination" | "route";
 
 /** One observable fact from one source. Factors and the narrative may only point at these. */
 export interface Evidence {
@@ -86,21 +83,6 @@ export interface Window {
   tz: string;
   from: string; // ISO
   to: string; // ISO
-  basis: "scheduled-time" | "whole-day";
-}
-
-export interface FlightInfo {
-  input: string;
-  carrier: string;
-  number: string;
-  normalized: string; // "UA1234"
-  /** Where BTS says this number flew over the data window. */
-  btsRoutes: { o: string; d: string; flights: number }[];
-  matchesRoute: boolean | null;
-  scheduledDeparture?: string; // "HH:MM" local at origin
-  scheduledArrival?: string; // "HH:MM" local at destination
-  adsbdbRoute?: { o: string; d: string };
-  live?: { status: string; depDelayMin?: number; note?: string };
 }
 
 export interface Alternate {
@@ -126,8 +108,6 @@ export interface AssessmentRequest {
   origin: string;
   destination: string;
   date: string; // YYYY-MM-DD, local date at the origin
-  flight?: string;
-  scenario?: string;
 }
 
 export interface Assessment {
@@ -142,11 +122,7 @@ export interface Assessment {
   evidence: Evidence[];
   actions: string[];
   alternates: Alternate[];
-  flight?: FlightInfo;
   sources: SourceStatus[];
   narrative: Narrative;
-  /** Things the tool changed or assumed on the agent's behalf, said out loud. */
-  adjustments: string[];
   generatedAt: string;
-  scenario?: { id: string; label: string; synthetic: boolean; recordedAt?: string };
 }

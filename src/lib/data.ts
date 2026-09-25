@@ -14,7 +14,6 @@ export interface BtsData {
   airports: Record<string, { city: string; state: string }>;
   routes: Record<string, Record<string, Stats>>;
   airportMonths: Record<string, Record<string, Stats>>;
-  flights: Record<string, { o: string; d: string; s: Stats; crsDep: string; crsArr: string }[]>;
 }
 
 let bts: BtsData | null = null;

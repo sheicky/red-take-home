@@ -2,18 +2,17 @@
 // rules → level & confidence → actions → narrative. Every source failure degrades the answer
 // (and says so in `sources` and `confidence`), none of them breaks it.
 
-import type { Airport, Alternate, Assessment, AssessmentRequest, Confidence, FlightInfo, Level, SourceId, SourceStatus, Window } from "./types";
+import type { Airport, Alternate, Assessment, AssessmentRequest, Confidence, Level, SourceId, SourceStatus, Window } from "./types";
 import { levelRank, maxLevel } from "./types";
 import type { Provider } from "./provider";
 import { URLS } from "./provider";
 import { airportByIata, loadBts, type Stats } from "./data";
 import { metroOf } from "./metros";
-import { addDays, btsTime, daysBetween, horizonFor, localDate, zonedInstant } from "./time";
+import { addDays, daysBetween, horizonFor, localDate, zonedInstant } from "./time";
 import { parseFaa, type FaaSnapshot } from "./sources/faa";
 import { parseMetars, parseTafs, type Taf } from "./sources/awc";
 import { parseAlerts, parseForecast } from "./sources/nws";
-import { btsFlightLookup, parseAdsbdb, parseAviationstack, parseFlightNumber } from "./sources/flight";
-import { alertRules, btsFlightRules, btsRouteRules, EvidenceBook, faaRules, forecastRules, metarRules, tafRules } from "./rules";
+import { alertRules, btsRouteRules, EvidenceBook, faaRules, forecastRules, metarRules, tafRules } from "./rules";
 import { narrate } from "./narrate";
 
 export class InputError extends Error {}
@@ -25,9 +24,6 @@ const SOURCE_NAMES: Record<SourceId, [string, string]> = {
   "nws-forecast": ["NWS 7-day forecast (api.weather.gov)", "https://www.weather.gov/documentation/services-web-api"],
   "nws-alerts": ["NWS active alerts (api.weather.gov)", "https://alerts.weather.gov/"],
   "bts-route": ["BTS on-time history, route × month", URLS.bts],
-  "bts-flight": ["BTS on-time history, flight number", URLS.bts],
-  adsbdb: ["adsbdb: filed route for a callsign", "https://www.adsbdb.com/"],
-  aviationstack: ["aviationstack: live flight status (optional key)", URLS.aviationstack],
 };
 
 const errMsg = (r: PromiseSettledResult<unknown>) => (r.status === "rejected" ? String((r.reason as Error)?.message ?? r.reason) : "");
@@ -58,43 +54,16 @@ async function nwsBundle(p: Provider, a: Airport, wantForecast: boolean, wantAle
   return { point, forecast, alerts };
 }
 
-export async function assess(req: AssessmentRequest, provider: Provider, scenario?: Assessment["scenario"]): Promise<Assessment> {
+export async function assess(req: AssessmentRequest, provider: Provider): Promise<Assessment> {
   const now = provider.now();
-  let origin = airportByIata(req.origin ?? "");
-  let destination = airportByIata(req.destination ?? "");
+  const origin = airportByIata(req.origin ?? "");
+  const destination = airportByIata(req.destination ?? "");
   if (!origin) throw new InputError(`Unknown origin airport "${req.origin}".`);
   if (!destination) throw new InputError(`Unknown destination airport "${req.destination}".`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(req.date ?? "")) throw new InputError("Date must be YYYY-MM-DD.");
 
   const bts = loadBts();
   const btsWindow = `${bts.window.from} to ${bts.window.to}`;
-  const adjustments: string[] = [];
-
-  // ── Flight number: never blocks, may correct the airports inside the same metro area.
-  let flight: FlightInfo | undefined;
-  const parsed = req.flight?.trim() ? parseFlightNumber(req.flight) : null;
-  if (req.flight?.trim() && !parsed) adjustments.push(`“${req.flight}” is not a recognizable flight number (expected e.g. UA 1234). Assessed without it.`);
-  let flightStats: { key: string; s: Stats; o: string; d: string; dep?: string } | undefined;
-  if (parsed) {
-    const oSet = metroOf(origin.iata)?.airports ?? [origin.iata];
-    const dSet = metroOf(destination.iata)?.airports ?? [destination.iata];
-    const m = btsFlightLookup(bts, parsed, oSet, dSet);
-    flight = { input: req.flight!, carrier: parsed.carrier, number: parsed.number, normalized: parsed.normalized, btsRoutes: m?.routes ?? [], matchesRoute: m ? !!m.match : null };
-    if (m?.match) {
-      if (m.match.o !== origin.iata) {
-        const a = airportByIata(m.match.o);
-        if (a) { adjustments.push(`${parsed.normalized} departs from ${a.iata}, not ${origin.iata}. Assessing ${a.iata}.`); origin = a; }
-      }
-      if (m.match.d !== destination.iata) {
-        const a = airportByIata(m.match.d);
-        if (a) { adjustments.push(`${parsed.normalized} lands at ${a.iata}, not ${destination.iata}. Assessing ${a.iata}.`); destination = a; }
-      }
-      if (m.operatedAs !== parsed.normalized) adjustments.push(`${parsed.normalized} reports to BTS as ${m.operatedAs} (regional operator).`);
-      flight.scheduledDeparture = btsTime(m.match.crsDep);
-      flight.scheduledArrival = btsTime(m.match.crsArr);
-      flightStats = { key: m.operatedAs, s: m.match.s, o: m.match.o, d: m.match.d, dep: flight.scheduledDeparture };
-    }
-  }
   if (origin.iata === destination.iata) throw new InputError("Origin and destination are the same airport.");
 
   // ── Horizon, in the ORIGIN's local calendar.
@@ -104,21 +73,11 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
   if (daysAhead > 366) throw new InputError("Pick a date within the next 12 months.");
   const horizon = horizonFor(daysAhead, req.date);
 
-  // ── Time windows the weather must be read for.
-  let oWin: Window, dWin: Window;
-  if (flight?.scheduledDeparture && flight.scheduledArrival) {
-    const dep = zonedInstant(req.date, flight.scheduledDeparture, origin.tz);
-    let arr = zonedInstant(req.date, flight.scheduledArrival, destination.tz);
-    if (arr <= dep) arr = zonedInstant(addDays(req.date, 1), flight.scheduledArrival, destination.tz);
-    oWin = { airport: origin.iata, tz: origin.tz, from: new Date(dep.getTime() - 3600_000).toISOString(), to: new Date(dep.getTime() + 2 * 3600_000).toISOString(), basis: "scheduled-time" };
-    dWin = { airport: destination.iata, tz: destination.tz, from: new Date(arr.getTime() - 2 * 3600_000).toISOString(), to: new Date(arr.getTime() + 3600_000).toISOString(), basis: "scheduled-time" };
-    if (daysAhead === 0 && dep < now) adjustments.push(`Scheduled departure ${flight.scheduledDeparture} (usual BTS schedule) is already past at ${origin.iata}; the flight may be airborne or rescheduled.`);
-  } else {
-    let oFrom = zonedInstant(req.date, "05:00", origin.tz);
-    if (daysAhead === 0 && oFrom < now) oFrom = now;
-    oWin = { airport: origin.iata, tz: origin.tz, from: oFrom.toISOString(), to: zonedInstant(req.date, "23:59", origin.tz).toISOString(), basis: "whole-day" };
-    dWin = { airport: destination.iata, tz: destination.tz, from: zonedInstant(req.date, "07:00", destination.tz).toISOString(), to: zonedInstant(addDays(req.date, 1), "01:00", destination.tz).toISOString(), basis: "whole-day" };
-  }
+  // ── The weather is read over the whole travel day: departure is unknown, so morning to night.
+  let oFrom = zonedInstant(req.date, "05:00", origin.tz);
+  if (daysAhead === 0 && oFrom < now) oFrom = now;
+  const oWin: Window = { airport: origin.iata, tz: origin.tz, from: oFrom.toISOString(), to: zonedInstant(req.date, "23:59", origin.tz).toISOString() };
+  const dWin: Window = { airport: destination.iata, tz: destination.tz, from: zonedInstant(req.date, "07:00", destination.tz).toISOString(), to: zonedInstant(addDays(req.date, 1), "01:00", destination.tz).toISOString() };
 
   const altAirports = (a: Airport) => (metroOf(a.iata)?.airports ?? []).filter((x) => x !== a.iata).map((x) => airportByIata(x)).filter((x): x is Airport => !!x);
   const altO = altAirports(origin);
@@ -127,14 +86,12 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
   // ── Fetch everything that can say something about this date, in parallel.
   const A = horizon.applicable;
   const icaos = [...new Set([origin, destination, ...altO, ...altD].map((a) => a.icao))];
-  const [faaR, tafR, metarR, oNws, dNws, adsbR, avsR] = await Promise.allSettled([
+  const [faaR, tafR, metarR, oNws, dNws] = await Promise.allSettled([
     A.faa ? provider.faaStatusXml() : Promise.resolve(null),
     A.taf ? provider.taf(icaos) : Promise.resolve(null),
     A.metar ? provider.metar([origin.icao, destination.icao]) : Promise.resolve(null),
     A["nws-forecast"] || A["nws-alerts"] ? nwsBundle(provider, origin, !!A["nws-forecast"], !!A["nws-alerts"]) : Promise.resolve(null),
     A["nws-forecast"] || A["nws-alerts"] ? nwsBundle(provider, destination, !!A["nws-forecast"], !!A["nws-alerts"]) : Promise.resolve(null),
-    parsed ? provider.adsbdbCallsign(parsed.callsign) : Promise.resolve(null),
-    parsed && A.aviationstack && provider.aviationstack ? provider.aviationstack(parsed.normalized) : Promise.resolve(null),
   ]);
 
   const book = new EvidenceBook();
@@ -207,58 +164,6 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
   const routeRes = btsRouteRules(book, routeMonths[String(month)], nationalStats(month), origin.iata, destination.iata, month, btsWindow, Object.keys(routeMonths).map(Number).sort((a, b) => a - b));
   status("bts-route", routeRes === "ok" ? "ok" : "no-data", `${btsWindow}, bundled${routeRes === "no-route" ? ", no nonstop history for this pair" : routeRes === "no-month" ? ", no history for this month" : ""}`);
 
-  // Flight: BTS + adsbdb + aviationstack
-  if (!parsed) {
-    status("bts-flight", "disabled", "No flight number given.");
-    status("adsbdb", "disabled", "No flight number given.");
-    status("aviationstack", "disabled", "No flight number given.");
-  } else {
-    if (flightStats) {
-      btsFlightRules(book, flightStats.key, flightStats.s, flightStats.o, flightStats.d, flightStats.dep, btsWindow);
-      status("bts-flight", "ok");
-    } else status("bts-flight", "no-data", flight!.btsRoutes.length ? "Number found on other routes only" : "Number not in BTS history");
-
-    const adsb = adsbR.status === "fulfilled" && adsbR.value ? parseAdsbdb(adsbR.value) : null;
-    if (adsbR.status === "rejected") status("adsbdb", "error", errMsg(adsbR));
-    else status("adsbdb", adsb ? "ok" : "no-data");
-    if (adsb) flight!.adsbdbRoute = adsb;
-
-    const oSet = metroOf(origin.iata)?.airports ?? [origin.iata];
-    const dSet = metroOf(destination.iata)?.airports ?? [destination.iata];
-    const adsbMatches = adsb ? oSet.includes(adsb.o) && dSet.includes(adsb.d) : null;
-    if (adsb) {
-      book.add({
-        source: "adsbdb", title: `${parsed.callsign} filed route: ${adsb.o}→${adsb.d}`,
-        detail: `Community flight-route database. Routes change; this is the most recent one it knows.`, url: URLS.adsbdb(parsed.callsign),
-        ignoredBecause: flightStats && !adsbMatches ? `BTS history shows ${flightStats.key} operating ${flightStats.o}→${flightStats.d}; adsbdb may hold a different day's routing` : undefined,
-      });
-    }
-    if (!flightStats) {
-      if (adsbMatches) flight!.matchesRoute = true;
-      else if (flight!.btsRoutes.length || adsb) {
-        flight!.matchesRoute = false;
-        const elsewhere = [...flight!.btsRoutes.slice(0, 3).map((r) => `${r.o}→${r.d}`), ...(adsb ? [`${adsb.o}→${adsb.d} (adsbdb)`] : [])];
-        const id = book.add({ source: flight!.btsRoutes.length ? "bts-flight" : "adsbdb", title: `${parsed.normalized} does not fly ${origin.iata}→${destination.iata}`, detail: `Known routes for this number: ${[...new Set(elsewhere)].join(", ")}.`, url: URLS.bts });
-        book.factor({ level: "MODERATE", side: "flight", evidence: [id], summary: `${parsed.normalized} is not known on ${origin.iata}→${destination.iata}. The booking details may be wrong, or it is a connection.`, action: `Verify the flight number and routing on the booking before relying on this assessment.` });
-      } else adjustments.push(`${parsed.normalized} is unknown to BTS history and adsbdb: new, seasonal, or mistyped. Assessed at airport level.`);
-    }
-
-    if (!A.aviationstack) status("aviationstack", "not-applicable", notApplicable("the free tier only returns same-day flights."));
-    else if (!provider.aviationstack) status("aviationstack", "disabled", "Set AVIATIONSTACK_KEY to enable (free tier: ~100 requests/month).");
-    else if (avsR.status === "rejected") status("aviationstack", "error", errMsg(avsR));
-    else {
-      const live = avsR.value ? parseAviationstack(avsR.value, req.date) : null;
-      if (!live) status("aviationstack", "no-data", "No record for that date");
-      else {
-        flight!.live = live;
-        const level: Level = live.status === "cancelled" ? "SEVERE" : live.status === "diverted" ? "HIGH" : (live.depDelayMin ?? 0) >= 60 ? "HIGH" : (live.depDelayMin ?? 0) >= 30 ? "MODERATE" : "LOW";
-        const id = book.add({ source: "aviationstack", title: `${parsed.normalized} live: ${live.status}`, detail: `Departure delay ${live.depDelayMin ?? 0} min.`, url: URLS.aviationstack });
-        if (level !== "LOW") book.factor({ level, side: "flight", evidence: [id], summary: `The airline reports ${parsed.normalized} ${live.status}${live.depDelayMin ? `, ${live.depDelayMin} min late` : ""}.`, action: live.status === "cancelled" ? "Rebook now. The flight is cancelled." : undefined });
-        status("aviationstack", "ok");
-      }
-    }
-  }
-
   // ── Alternates in the same metro area: same checks, same windows, scored separately.
   const alternates: Alternate[] = [];
   for (const [side, alts, w] of [["origin", altO, oWin], ["destination", altD, dWin]] as const) {
@@ -295,7 +200,7 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
     conf = steps[Math.min(3, steps.indexOf(conf) + 1)];
     reasons.push(`Source(s) unavailable: ${broken.map((s) => s.source).join(", ")}. A disruption there would not be seen.`);
   }
-  if (!flight?.scheduledDeparture && daysAhead <= 1) reasons.push("No scheduled time known: weather is read for the whole day, so a short event may be over-weighted.");
+  if (daysAhead <= 1) reasons.push("The departure time is not known: weather is read over the whole day, so a short event may be over-weighted.");
   if (routeRes === "no-route") reasons.push("No nonstop history: a connecting hub is not assessed.");
   if (routeRes === "no-month") reasons.push("No on-time history for this month on this route.");
 
@@ -319,8 +224,8 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
   const base: Omit<Assessment, "narrative"> = {
     request: req, origin, destination, horizon, windows: [oWin, dWin], level,
     confidence: { level: conf, reasons },
-    factors: book.factors, evidence: book.items, actions, alternates, flight, sources,
-    adjustments, generatedAt: now.toISOString(), scenario,
+    factors: book.factors, evidence: book.items, actions, alternates, sources,
+    generatedAt: now.toISOString(),
   };
   return { ...base, narrative: await narrate(base) };
 }

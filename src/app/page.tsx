@@ -4,7 +4,6 @@ import { ResultSkeleton } from "@/components/ResultSkeleton";
 import { TripForm } from "@/components/TripForm";
 import { requestFromParams, searchFor } from "@/lib/query";
 import { runAssessment } from "@/lib/run";
-import { SCENARIOS } from "@/lib/scenarios";
 import type { AssessmentRequest } from "@/lib/types";
 
 const tomorrowInNewYork = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(Date.now() + 86_400_000);
@@ -25,7 +24,6 @@ export default async function Page({ searchParams }: PageProps<"/">) {
         key={key}
         initial={req}
         defaultDate={tomorrowInNewYork()}
-        scenarios={SCENARIOS.map(({ id, short, preset }) => ({ id, short, preset }))}
       />
       {req && (
         <div className="mt-12">

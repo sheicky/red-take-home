@@ -39,13 +39,6 @@ export function zonedInstant(ymd: string, hhmm: string, tz: string): Date {
   return new Date(guess - tzOffsetMs(new Date(first), tz));
 }
 
-/** BTS stores times as "hhmm" strings, "2400" meaning midnight. */
-export function btsTime(hhmm: string | undefined): string | undefined {
-  if (!hhmm || !/^\d{3,4}$/.test(hhmm)) return undefined;
-  const s = hhmm.padStart(4, "0");
-  return s === "2400" ? "23:59" : `${s.slice(0, 2)}:${s.slice(2)}`;
-}
-
 /**
  * What each source can honestly say about a date `daysAhead` away.
  * - FAA NAS status is a snapshot of NOW. It is evidence for today only — a ground delay
@@ -65,9 +58,6 @@ export function horizonFor(daysAhead: number, travelDate: string): Horizon {
     "nws-forecast": daysAhead <= 6, // periods span ~7 days from now; day 7 is often only half covered
     "nws-alerts": daysAhead <= 7,
     "bts-route": true,
-    "bts-flight": true,
-    adsbdb: true,
-    aviationstack: daysAhead === 0,
   };
   let recheck: string | undefined;
   if (regime === "beyond") recheck = `Re-check on ${addDays(travelDate, -6)} (forecast becomes available) and on ${addDays(travelDate, -1)} (TAF).`;

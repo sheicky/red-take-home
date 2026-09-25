@@ -1,13 +1,14 @@
-// End-to-end over the pipeline with the recorded and synthetic providers — no network.
+// End-to-end over the pipeline with the test providers (real captured payloads, plus one
+// invented storm for the SEVERE path). No network.
 // Assertions avoid BTS numbers so the test survives a data rebuild.
 
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { assess, InputError } from "./assess";
-import { scenarioById } from "./scenarios";
+import { blizzardProvider, replayProvider } from "@/test/providers";
 
 beforeAll(() => { vi.stubEnv("OPENAI_API_KEY", ""); });
 
-const recorded = () => scenarioById("recorded-2026-09-25")!.provider();
+const recorded = replayProvider;
 
 describe("recorded 2026-09-25, JFK → SFO", () => {
   it("is HIGH, with the SFO ground delay program as a destination factor", async () => {
@@ -37,19 +38,11 @@ describe("recorded 2026-09-25, JFK → SFO", () => {
     expect(a.factors.some((f) => f.summary.includes("Ground delay program"))).toBe(false);
   });
 
-  it("flags a flight number that does not fly the route, without blocking", async () => {
-    const a = await assess({ origin: "JFK", destination: "SFO", date: "2026-09-25", flight: "UA1234" }, recorded());
-    expect(a.flight?.matchesRoute).toBe(false);
-    expect(a.factors.some((f) => f.side === "flight" && f.summary.includes("not known on JFK→SFO"))).toBe(true);
-    expect(a.level).toBe("HIGH");
-  });
-
-  it("a real flight number narrows the weather to its schedule and outvotes a stale adsbdb route", async () => {
-    const a = await assess({ origin: "JFK", destination: "SFO", date: "2026-09-25", flight: "DL 679" }, recorded());
-    expect(a.flight).toMatchObject({ matchesRoute: true, scheduledDeparture: "14:55", adsbdbRoute: { o: "ATL", d: "SEA" } });
-    expect(a.windows[0].basis).toBe("scheduled-time");
-    expect(a.level).toBe("MODERATE"); // the evening gusts (after 19:00) no longer count
-    expect(a.evidence.find((e) => e.source === "adsbdb")?.ignoredBecause).toContain("BTS history");
+  it("reads the whole day, and does not count current destination weather against an unknown arrival", async () => {
+    const a = await assess({ origin: "JFK", destination: "SFO", date: "2026-09-25" }, recorded());
+    expect(a.level).toBe("HIGH"); // the evening gusts at JFK are inside the day
+    const sfoNow = a.evidence.find((e) => e.source === "metar" && e.airport === "SFO");
+    expect(sfoNow?.ignoredBecause).toContain("arrival time is unknown");
   });
 
   it("refuses a date already past at the origin", async () => {
@@ -65,9 +58,9 @@ describe("recorded 2026-09-25, JFK → SFO", () => {
   });
 });
 
-describe("synthetic blizzard", () => {
+describe("blizzard test double", () => {
   it("is SEVERE because of the ground stop at the destination", async () => {
-    const a = await assess({ origin: "BOS", destination: "ORD", date: "2027-01-14" }, scenarioById("synthetic-blizzard")!.provider());
+    const a = await assess({ origin: "BOS", destination: "ORD", date: "2027-01-14" }, blizzardProvider());
     expect(a.level).toBe("SEVERE");
     expect(a.actions[0]).toMatch(/Contact the traveler now/);
   });

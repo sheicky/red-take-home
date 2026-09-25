@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import { notamEnd, parseDuration, parseFaa, parseReopen } from "./faa";
 import { ceilingOf, conditionHits, parseTafs, parseVisib } from "./awc";
 import { classifyAlert, forecastHits, parseAlerts } from "./nws";
-import { parseAdsbdb, parseFlightNumber } from "./flight";
 
 const fx = (...p: string[]) => fs.readFileSync(path.join(__dirname, "../../../fixtures", ...p), "utf8");
 const NOW = new Date("2026-09-25T16:12:33Z");
@@ -128,20 +127,5 @@ describe("NWS", () => {
     expect(forecastHits(p)).toEqual([]);
     expect(forecastHits({ ...p, shortForecast: "Showers And Thunderstorms Likely" })[0].level).toBe("MODERATE");
     expect(forecastHits({ ...p, shortForecast: "Sunny", windMaxMph: 45 })[0].level).toBe("HIGH");
-  });
-});
-
-describe("flight numbers", () => {
-  it("accepts IATA and ICAO spellings", () => {
-    expect(parseFlightNumber("UA 1234")).toMatchObject({ carrier: "UA", normalized: "UA1234", callsign: "UAL1234" });
-    expect(parseFlightNumber("ual1234")).toMatchObject({ carrier: "UA", normalized: "UA1234" });
-    expect(parseFlightNumber("B6-0415")).toMatchObject({ carrier: "B6", normalized: "B6415", callsign: "JBU415" });
-    expect(parseFlightNumber("hello")).toBeNull();
-    expect(parseFlightNumber("1234")).toBeNull();
-  });
-
-  it("reads the route adsbdb returns", () => {
-    expect(parseAdsbdb(JSON.parse(fx("recorded-2026-09-25", "adsbdb-UAL1234.json")))).toEqual({ o: "EWR", d: "ORD" });
-    expect(parseAdsbdb({ response: "unknown callsign" })).toBeNull();
   });
 });

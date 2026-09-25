@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Trip check",
-  description: "What could disrupt a U.S. flight, the evidence, and what to do.",
+  description: "What could disrupt a U.S. trip, the evidence, and what to do.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
