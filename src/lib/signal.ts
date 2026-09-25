@@ -1,4 +1,4 @@
-import type { Evidence, Factor, SourceId } from "./types";
+import type { Evidence, Factor, Level, SourceId } from "./types";
 
 /** A factor reduced to what fits on a tile: the cause, one number, and where it came from. */
 export interface Signal {
@@ -86,4 +86,28 @@ function parse(source: SourceId | undefined, s: string): Omit<Signal, "basis"> {
 export function signalOf(f: Factor, evidence: Evidence[]): Signal {
   const source = evidence.find((e) => e.id === f.evidence[0])?.source;
   return { ...parse(source, f.summary), basis: source ? BASIS[source] : "Rule" };
+}
+
+export interface SignalGroup {
+  cause: string;
+  level: Level;
+  metric?: string;
+  bases: string[];
+  factors: Factor[];
+}
+
+const RANK: Record<Level, number> = { LOW: 0, MODERATE: 1, HIGH: 2, SEVERE: 3 };
+
+/** One tile per cause: three sources saying "wind" at JFK are one problem seen three ways. */
+export function groupSignals(factors: Factor[], evidence: Evidence[]): SignalGroup[] {
+  const groups = new Map<string, SignalGroup>();
+  for (const f of [...factors].sort((a, b) => RANK[b.level] - RANK[a.level])) {
+    const s = signalOf(f, evidence);
+    const g = groups.get(s.cause);
+    if (!g) { groups.set(s.cause, { cause: s.cause, level: f.level, metric: s.metric, bases: [s.basis], factors: [f] }); continue; }
+    g.factors.push(f);
+    g.metric ??= s.metric;
+    if (!g.bases.includes(s.basis)) g.bases.push(s.basis);
+  }
+  return [...groups.values()];
 }

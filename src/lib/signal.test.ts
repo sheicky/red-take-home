@@ -5,7 +5,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { assess } from "./assess";
 import { scenarioById } from "./scenarios";
-import { signalOf } from "./signal";
+import { groupSignals, signalOf } from "./signal";
 import type { Evidence, Factor, Level, SourceId } from "./types";
 
 const make = (source: SourceId, summary: string, side: Factor["side"] = "origin", level: Level = "MODERATE") => {
@@ -104,6 +104,35 @@ describe("signalOf, one template at a time", () => {
       .toEqual({ cause: "Delayed", metric: "45 min late", basis: "Airline" });
     expect(make("aviationstack", "The airline reports DL679 cancelled.", "flight", "SEVERE"))
       .toEqual({ cause: "Cancelled", basis: "Airline" });
+  });
+});
+
+describe("groupSignals", () => {
+  const ev = (id: string, source: SourceId): Evidence => ({ id, source, title: "", detail: "", url: "" });
+  const f = (id: string, level: Level, summary: string, e: string): Factor => ({ id, level, side: "origin", airport: "JFK", summary, evidence: [e] });
+
+  it("merges factors with the same cause: worst level, first number, every basis once", () => {
+    const evidence = [ev("E1", "taf"), ev("E2", "metar"), ev("E3", "nws-alerts"), ev("E4", "nws-forecast")];
+    const factors = [
+      f("F1", "MODERATE", "Airport forecast for JFK during the scheduled time: 14:00–16:55 local, wind 22 kt gusting 31 kt.", "E1"),
+      f("F2", "HIGH", "Right now at JFK: wind 21 kt gusting 32 kt.", "E2"),
+      f("F3", "MODERATE", "Wind Advisory in effect at JFK during the travel window.", "E3"),
+      f("F4", "MODERATE", "Forecast for JFK: Tonight: wind up to 33 mph.", "E4"),
+    ];
+    const g = groupSignals(factors, evidence);
+    expect(g.map((x) => [x.cause, x.level, x.metric, x.bases, x.factors.map((y) => y.id)])).toEqual([
+      ["Wind", "HIGH", "gusts 32 kt", ["Now", "Forecast", "NWS forecast"], ["F2", "F1", "F4"]],
+      ["Wind Advisory", "MODERATE", undefined, ["NWS alert"], ["F3"]],
+    ]);
+  });
+
+  it("keeps different causes apart, worst first", () => {
+    const evidence = [ev("E1", "taf"), ev("E2", "faa")];
+    const g = groupSignals([
+      f("F1", "MODERATE", "Airport forecast for SFO during the day: 08:00–10:00 local, IFR conditions (600 ft, 6 SM).", "E1"),
+      f("F2", "HIGH", "Ground delay program for SFO (low ceilings): flights to SFO are held before departure, avg 95 min, max 140 min.", "E2"),
+    ], evidence);
+    expect(g.map((x) => x.cause)).toEqual(["Ground delay", "Low cloud"]);
   });
 });
 
