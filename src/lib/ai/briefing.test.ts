@@ -65,3 +65,20 @@ describe("writeBriefing", () => {
     expect(await writeBriefing(base, f as never)).toMatchObject({ ok: false, reason: expect.stringContaining("429") });
   });
 });
+
+describe("OPENAI_BASE_URL", () => {
+  it("sends the request to the configured base, for a proxy or a local stand-in", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    vi.stubEnv("OPENAI_BASE_URL", "http://127.0.0.1:3231/v1/");
+    const f = reply({ summary: "Gusts at JFK [E1].", action: "Call the traveler.", citations: ["E1"] });
+    await writeBriefing(base, f as never);
+    expect((f.mock.calls[0] as unknown as [string])[0]).toBe("http://127.0.0.1:3231/v1/chat/completions");
+  });
+
+  it("defaults to OpenAI", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    const f = reply({ summary: "Gusts at JFK [E1].", action: "Call the traveler.", citations: ["E1"] });
+    await writeBriefing(base, f as never);
+    expect((f.mock.calls[0] as unknown as [string])[0]).toBe("https://api.openai.com/v1/chat/completions");
+  });
+});
