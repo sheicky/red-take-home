@@ -150,9 +150,19 @@ describe("handleChat", () => {
 
   it("reports an upstream error instead of streaming nothing", async () => {
     vi.stubEnv("OPENROUTER_API_KEY", "sk-test");
-    const f = vi.fn(async () => new Response('{"error":{"message":"quota"}}', { status: 429 }));
+    const f = vi.fn(async () => new Response('{"error":{"message":"bad gateway"}}', { status: 500 }));
     const r = await handleChat({ ...trip, messages: [{ role: "user", content: "Why?" }] }, deps(f as never));
     expect(r.status).toBe(502);
-    expect((await r.json()).error).toContain("429");
+    expect((await r.json()).error).toContain("500");
+  });
+
+  it("says the free model is busy when it stays rate-limited", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-test");
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const f = vi.fn(async () => new Response('{"error":{"message":"quota"}}', { status: 429, headers: { "retry-after": "0" } }));
+    const r = await handleChat({ ...trip, messages: [{ role: "user", content: "Why?" }] }, deps(f as never));
+    expect(r.status).toBe(503);
+    expect((await r.json()).error).toMatch(/^The free AI model is busy right now/);
+    expect(f).toHaveBeenCalledTimes(3);
   });
 });

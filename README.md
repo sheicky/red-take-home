@@ -27,6 +27,8 @@ The model only sees what the rules produced. It must cite the evidence it uses, 
 
 Without a key, everything else still works and the page says the AI parts are off.
 
+Free models share one quota across all OpenRouter users, so at busy times they answer `429`. The server retries twice, then lets OpenRouter try `google/gemma-4-26b-a4b-it:free`. If both are saturated, the page says the model is busy and everything else stays usable. For a steady quota, link your own Google AI Studio key in [OpenRouter integrations](https://openrouter.ai/settings/integrations), or switch `OPENROUTER_MODEL` to the paid `google/gemma-4-31b-it`.
+
 ## System design
 
 ![How one check works: the browser calls the Next.js server, the rules read the public data and decide the level, the model on OpenRouter only writes the message and answers the chat](docs/system-design.svg)
@@ -79,6 +81,7 @@ docker run --rm -p 3000:3000 -e OPENROUTER_API_KEY=your-key ghcr.io/sheicky/red-
 |---|---|---|
 | `OPENROUTER_API_KEY` | `.env.local`, and the GitHub secret of the same name for CI | none |
 | `OPENROUTER_MODEL` | `.env.local`, and the GitHub variable of the same name | `google/gemma-4-31b-it:free` |
+| `OPENROUTER_FALLBACK_MODELS` | `.env.local`, comma-separated, empty to turn off | `google/gemma-4-26b-a4b-it:free` |
 | `OPENROUTER_BASE_URL` | `.env.local` | `https://openrouter.ai/api/v1` |
 | `NWS_USER_AGENT` | `.env.local` (the weather service asks for a contact) | a generic string |
 

@@ -71,11 +71,37 @@ describe("writeBriefing", () => {
     expect(b).toMatchObject({ ok: false, reason: expect.stringContaining("E9") });
   });
 
-  it("reports an API error in one readable line, without retrying", async () => {
+  it("retries a rate-limited call twice, then says the free model is busy in plain words", async () => {
     vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
-    const f = vi.fn(async () => new Response('{"error":{"message":"Rate limit exceeded: free-models-per-min"}}', { status: 429 }));
-    expect(await writeBriefing(base, f as never)).toEqual({ ok: false, reason: "model API 429: Rate limit exceeded: free-models-per-min" });
+    const body = '{"error":{"message":"Provider returned error","metadata":{"provider_name":"Google AI Studio","raw":"temporarily rate-limited upstream"}}}';
+    const f = vi.fn(async () => new Response(body, { status: 429, headers: { "retry-after": "0" } }));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await writeBriefing(base, f as never)).toEqual({ ok: false, reason: expect.stringMatching(/^The free AI model is busy right now/) });
+    expect(warn).toHaveBeenCalledWith("[briefing] model API 429: Provider returned error (Google AI Studio: temporarily rate-limited upstream)");
+    expect(f).toHaveBeenCalledTimes(3);
+  });
+
+  it("gets through when the rate limit clears on a retry", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    const good = JSON.stringify({ model: "google/gemma-4-31b-it:free", choices: [{ message: { content: JSON.stringify({ summary: "Gusts at JFK [E1].", steps: ["Call the traveler."], citations: ["E1"] }) } }] });
+    const replies = [new Response("{}", { status: 429, headers: { "retry-after": "0" } }), new Response(good, { status: 200 })];
+    const f = vi.fn(async () => replies.shift()!);
+    expect(await writeBriefing(base, f as never)).toMatchObject({ ok: true, summary: "Gusts at JFK [E1]." });
+    expect(f).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry other errors", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    const f = vi.fn(async () => new Response('{"error":{"message":"No auth credentials found"}}', { status: 401 }));
+    expect(await writeBriefing(base, f as never)).toEqual({ ok: false, reason: "model API 401: No auth credentials found" });
     expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it("names the model that actually answered, when a fallback did", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    const content = JSON.stringify({ summary: "Gusts at JFK [E1].", steps: ["Call the traveler."], citations: ["E1"] });
+    const f = vi.fn(async () => new Response(JSON.stringify({ model: "google/gemma-4-26b-a4b-it:free", choices: [{ message: { content } }] }), { status: 200 }));
+    expect(await writeBriefing(base, f as never)).toMatchObject({ ok: true, model: "google/gemma-4-26b-a4b-it:free" });
   });
 });
 
@@ -98,5 +124,14 @@ describe("OPENROUTER_BASE_URL", () => {
     expect(url).toBe("https://openrouter.ai/api/v1/chat/completions");
     expect(JSON.parse(init.body as string).model).toBe("google/gemma-4-31b-it:free");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer sk-or-test");
+    expect(JSON.parse(init.body as string).models).toEqual(["google/gemma-4-31b-it:free", "google/gemma-4-26b-a4b-it:free"]);
+  });
+
+  it("sends no fallback list when OPENROUTER_FALLBACK_MODELS is empty", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "sk-or-test");
+    vi.stubEnv("OPENROUTER_FALLBACK_MODELS", "");
+    const f = reply(ok);
+    await writeBriefing(base, f as never);
+    expect(JSON.parse((f.mock.calls[0] as unknown as [string, RequestInit])[1].body as string).models).toBeUndefined();
   });
 });

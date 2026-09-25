@@ -4,7 +4,7 @@ import { requestFromParams } from "../query";
 import type { Run } from "../run";
 import type { Assessment, AssessmentRequest } from "../types";
 import { fenced } from "./context";
-import { llmChat, llmConfig, upstreamError } from "./llm";
+import { BUSY, llmChat, llmConfig, upstreamError } from "./llm";
 import { chatSystem } from "./prompts";
 
 export interface Turn { role: "user" | "assistant"; content: string }
@@ -82,6 +82,7 @@ export async function handleChat(
   } catch (e) {
     return fail(502, `The model is unavailable: ${(e as Error).message}`);
   }
+  if (res.status === 429) { console.warn(`[chat] ${await upstreamError(res)}`); return fail(503, BUSY); }
   if (!res.ok || !res.body) return fail(502, `The model did not answer (${await upstreamError(res)}).`);
   return new Response(readDeltas(res.body), { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
 }

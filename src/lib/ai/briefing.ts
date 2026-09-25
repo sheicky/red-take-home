@@ -11,7 +11,7 @@ import type { Assessment, Briefing, Level } from "../types";
 import { levelRank } from "../types";
 import { fenced } from "./context";
 import { jsonIn, plain } from "./format";
-import { llmChat, llmConfig, upstreamError } from "./llm";
+import { BUSY, llmChat, llmConfig, upstreamError } from "./llm";
 import { briefingSystem } from "./prompts";
 
 export type Draft = { summary: string; steps: string[]; citations: string[] };
@@ -74,10 +74,16 @@ export async function writeBriefing(a: Assessment, fetchImpl: typeof fetch = fet
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
       const res = await llmChat({ messages, response_format: FORMAT }, fetchImpl, AbortSignal.timeout(45_000));
-      if (!res.ok) return { ok: false, reason: await upstreamError(res) };
-      const content: string = (await res.json()).choices?.[0]?.message?.content ?? "";
+      if (!res.ok) {
+        const detail = await upstreamError(res);
+        if (res.status === 429) { console.warn(`[briefing] ${detail}`); return { ok: false, reason: BUSY }; }
+        return { ok: false, reason: detail };
+      }
+      const j = await res.json();
+      const content: string = j.choices?.[0]?.message?.content ?? "";
       const r = readDraft(content, a.level, ids);
-      if ("draft" in r) return { ok: true, ...r.draft, model };
+      // With fallbacks, the model that answered may not be the first one asked: name the real one.
+      if ("draft" in r) return { ok: true, ...r.draft, model: typeof j.model === "string" && j.model ? j.model : model };
       reason = r.reason;
       messages.push({ role: "assistant", content }, { role: "user", content: `That draft was rejected: ${reason}. Reply again with only the JSON object, following every rule.` });
     }
