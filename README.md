@@ -29,36 +29,9 @@ Without a key, everything else still works and the page says the AI parts are of
 
 ## System design
 
-```mermaid
-flowchart TB
-  user(["Ops agent in the browser"])
+![How one check works: the browser calls the Next.js server, the rules read the public data and decide the level, the model on OpenRouter only writes the message and answers the chat](docs/system-design.svg)
 
-  subgraph server ["Next.js server"]
-    direction LR
-    page["Page and assess API"]
-    chat["Chat API"]
-    rules["Rules engine<br/>decides the level"]
-    writer["Message writer<br/>checks JSON, citations, level"]
-  end
-
-  subgraph data ["Public data, fetched live, cached 5 min per trip"]
-    direction LR
-    faa["FAA<br/>airport status"]
-    awc["Airport forecasts<br/>TAF and METAR"]
-    nws["Weather service<br/>forecast and alerts"]
-    bts[("On-time history<br/>bundled")]
-  end
-
-  llm["OpenRouter<br/>Gemma 4 31B"]
-
-  user -->|route and date| page
-  user -->|question| chat
-  page --> rules
-  rules -->|reads| data
-  page -->|assessment| writer
-  writer -->|draft, one retry| llm
-  chat -->|assessment and question| llm
-```
+The drawing is described in `scripts/diagram.ts` and drawn with rough.js and the Excalidraw font. Edit the script, then run `bun run diagram` to redraw it.
 
 A check goes like this:
 
@@ -136,4 +109,5 @@ src/app            the page and the API routes (/api/assess, /api/chat, /api/air
 src/lib            sources, rules, the assessment, and the AI in src/lib/ai
 src/components     the result page
 data               airports and on-time history, built by scripts/
+docs               the system design drawing
 ```
