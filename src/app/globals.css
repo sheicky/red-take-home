@@ -1,58 +1,68 @@
 @import "tailwindcss";
 
-:root {
-  --paper: #f3f6f9;
-  --panel: #ffffff;
-  --ink: #14233b;
-  --muted: #56667a;
-  --rule: #d4dce5;
-  --focus: #2563eb;
-  --low: #247a4a;
-  --low-bg: #e4f3ea;
-  --moderate: #9a6412;
-  --moderate-bg: #fbf0da;
-  --high: #c0392b;
-  --high-bg: #fbe5e2;
-  --severe: #a3136a; /* the magenta of LIFR on aviation weather charts */
-  --severe-bg: #f8e1ef;
-  --na: #8a97a8;
+/* GoFaso charter: cream, ink, yellow for actions, League Spartan + Jost, self-hosted. */
+@font-face {
+  font-family: "League Spartan";
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/league-spartan-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "League Spartan";
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/league-spartan-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Jost";
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/jost-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Jost";
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/jost-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+A720-A7FF;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #0f1826;
-    --panel: #162235;
-    --ink: #e6edf5;
-    --muted: #9aabbf;
-    --rule: #2a3a52;
-    --focus: #7aa7ff;
-    --low: #5cc98b;
-    --low-bg: #16362a;
-    --moderate: #e9b44c;
-    --moderate-bg: #3a2e14;
-    --high: #ff7a6b;
-    --high-bg: #3d1d1c;
-    --severe: #f07ac0;
-    --severe-bg: #3c1732;
-    --na: #6c7c91;
-  }
+:root {
+  --creme: #fffdf2;
+  --noir: #101010;
+  --jaune: #ffdc4e;
+  --gris: #6b6b64;
+  --filet: #e4e0cf;
+  /* Risk heat: no green (banned by the charter). Each fill carries ink or cream text at >= 4.5:1. */
+  --low: #ffffff;
+  --moderate: #ffdc4e;
+  --high: #f26b3a;
+  --severe: #9c2a2a;
+  --fd: "League Spartan", Futura, "Trebuchet MS", sans-serif;
+  --fb: "Jost", Futura, "Century Gothic", sans-serif;
 }
 
 @theme inline {
-  --font-sans: var(--font-body);
-  --font-display: var(--font-display);
+  --font-sans: var(--fb);
+  --font-display: var(--fd);
 }
 
-html { background: var(--paper); }
+html { background: var(--creme); }
 body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--font-body), system-ui, sans-serif;
-  font-size: 15px;
-  line-height: 1.55;
+  background: var(--creme);
+  color: var(--noir);
+  font-family: var(--fb);
+  font-size: 16px;
+  line-height: 1.5;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
+  caret-color: var(--noir);
 }
-:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3, .display { font-family: var(--fd); letter-spacing: -0.015em; text-wrap: balance; }
+::selection { background: var(--jaune); color: var(--noir); }
+:focus-visible { outline: 3px solid var(--noir); outline-offset: 2px; }
+a { text-underline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
-.display { font-family: var(--font-display), sans-serif; }
