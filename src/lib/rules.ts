@@ -54,7 +54,7 @@ export function faaRules(book: EvidenceBook, snap: FaaSnapshot, airport: string,
     let title = "";
     switch (e.kind) {
       case "ground-stop":
-        title = `Ground stop — ${airport}`;
+        title = `Ground stop at ${airport}`;
         level = side === "destination" ? "SEVERE" : "HIGH";
         summary = side === "destination"
           ? `Ground stop for flights to ${airport} (${e.reason}): flights bound there are held at their origin${e.endTime ? ` until ~${e.endTime}` : ""}.`
@@ -64,7 +64,7 @@ export function faaRules(book: EvidenceBook, snap: FaaSnapshot, airport: string,
           : `Warn the traveler of likely late inbound aircraft at ${airport}; check the flight status before leaving.`;
         break;
       case "ground-delay": {
-        title = `Ground delay program — ${airport}`;
+        title = `Ground delay program at ${airport}`;
         const direct: Level = (e.avgMin ?? 0) >= 90 ? "HIGH" : "MODERATE";
         level = side === "destination" ? direct : lowerLevel(direct);
         summary = side === "destination"
@@ -76,7 +76,7 @@ export function faaRules(book: EvidenceBook, snap: FaaSnapshot, airport: string,
         break;
       }
       case "arr-dep-delay": {
-        title = `${e.direction} delays — ${airport}`;
+        title = `${e.direction} delays at ${airport}`;
         const relevant = (side === "origin" && e.direction === "Departure") || (side === "destination" && e.direction === "Arrival");
         const lvl: Level = (e.maxMin ?? 0) >= 90 ? "HIGH" : (e.maxMin ?? 0) >= 45 ? "MODERATE" : "LOW";
         level = relevant ? lvl : lvl === "LOW" ? "LOW" : lowerLevel(lvl);
@@ -84,13 +84,13 @@ export function faaRules(book: EvidenceBook, snap: FaaSnapshot, airport: string,
         break;
       }
       case "closure":
-        title = `Airport closure — ${airport}`;
+        title = `Airport closure at ${airport}`;
         level = "SEVERE";
         summary = `FAA lists ${airport} as closed${e.reopen ? ` (reopen ${e.reopen})` : ""}: ${e.reason.slice(0, 160)}`;
         action = `Treat the flight as at risk of cancellation: contact the traveler and the airline now; prepare an alternate airport.`;
         break;
       default:
-        title = `Unrecognized FAA program — ${airport}`;
+        title = `Unrecognized FAA program at ${airport}`;
         level = "MODERATE";
         summary = `FAA lists an event for ${airport} this tool does not recognize; read it at the source.`;
     }
@@ -131,7 +131,7 @@ export function tafRules(book: EvidenceBook, taf: Taf | undefined, w: Window, si
     book.factor({
       level, side, airport: w.airport, evidence: [id],
       summary: `Airport forecast for ${w.airport} during the ${w.basis === "scheduled-time" ? "scheduled time" : "day"}: ${uniq(whys).slice(0, 3).join("; ")}.`,
-      action: level === "HIGH" ? `Weather at ${w.airport} is likely to cut capacity — consider an earlier flight or build a buffer.` : undefined,
+      action: level === "HIGH" ? `Weather at ${w.airport} is likely to cut capacity. Consider an earlier flight or build a buffer.` : undefined,
     });
   }
   return "ok";
@@ -151,7 +151,7 @@ export function metarRules(book: EvidenceBook, metar: Metar | undefined, w: Wind
     detail: metar.raw, observedAt: metar.observed.toISOString(), url: URLS.tafHuman(metar.icao),
     ignoredBecause: soon ? undefined
       : side === "destination" && w.basis === "whole-day"
-        ? "current conditions at the destination; arrival time unknown (give a flight number) — the TAF covers the day"
+        ? "current conditions at the destination; arrival time unknown (give a flight number); the TAF covers the day"
         : "observation is current conditions; the flight window is more than 3 h away (TAF covers it)",
   });
   if (!soon) return;
@@ -170,7 +170,7 @@ export function forecastRules(book: EvidenceBook, periods: ForecastPeriod[], w: 
   const whys: string[] = [];
   for (const p of used) {
     const id = book.add({
-      source: "nws-forecast", airport: w.airport, title: `NWS forecast ${w.airport} — ${p.name}`,
+      source: "nws-forecast", airport: w.airport, title: `NWS forecast for ${w.airport}, ${p.name}`,
       detail: `${p.shortForecast}. Wind up to ${p.windMaxMph ?? "?"} mph.${p.pop != null ? ` Precipitation ${p.pop}%.` : ""} (${office})`,
       observedAt: p.start.toISOString(), url,
     });

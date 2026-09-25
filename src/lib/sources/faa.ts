@@ -96,7 +96,7 @@ export function parseFaa(xml: string, now: Date): FaaSnapshot {
       const reopen = text(a.Reopen);
       const reopenAt = notamEnd(reason) ?? parseReopen(reopen, now);
       let ignoredBecause: string | undefined;
-      if (GA_ONLY.test(reason)) ignoredBecause = "NOTAM closes the airport to non-scheduled / general aviation only — airline flights are not affected";
+      if (GA_ONLY.test(reason)) ignoredBecause = "NOTAM closes the airport to non-scheduled / general aviation only. Airline flights are not affected";
       else if (reopenAt && reopenAt.getTime() < now.getTime()) ignoredBecause = `closure ended ${reopenAt.toISOString().slice(0, 16).replace("T", " ")} UTC but is still listed`;
       events.push({ kind: "closure", airport: text(a.ARPT), reason, reopen, ignoredBecause, raw: raw(a) });
     }

@@ -20,14 +20,14 @@ export class InputError extends Error {}
 
 const SOURCE_NAMES: Record<SourceId, [string, string]> = {
   faa: ["FAA NAS Status (ground stops, delay programs)", URLS.faaHuman],
-  metar: ["METAR — current airport observations (aviationweather.gov)", "https://aviationweather.gov/data/metar/"],
-  taf: ["TAF — airport forecasts, 24–30 h (aviationweather.gov)", "https://aviationweather.gov/data/taf/"],
+  metar: ["METAR: current airport observations (aviationweather.gov)", "https://aviationweather.gov/data/metar/"],
+  taf: ["TAF: airport forecasts, 24–30 h (aviationweather.gov)", "https://aviationweather.gov/data/taf/"],
   "nws-forecast": ["NWS 7-day forecast (api.weather.gov)", "https://www.weather.gov/documentation/services-web-api"],
   "nws-alerts": ["NWS active alerts (api.weather.gov)", "https://alerts.weather.gov/"],
   "bts-route": ["BTS on-time history, route × month", URLS.bts],
   "bts-flight": ["BTS on-time history, flight number", URLS.bts],
-  adsbdb: ["adsbdb — filed route for a callsign", "https://www.adsbdb.com/"],
-  aviationstack: ["aviationstack — live flight status (optional key)", URLS.aviationstack],
+  adsbdb: ["adsbdb: filed route for a callsign", "https://www.adsbdb.com/"],
+  aviationstack: ["aviationstack: live flight status (optional key)", URLS.aviationstack],
 };
 
 const errMsg = (r: PromiseSettledResult<unknown>) => (r.status === "rejected" ? String((r.reason as Error)?.message ?? r.reason) : "");
@@ -73,7 +73,7 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
   // ── Flight number: never blocks, may correct the airports inside the same metro area.
   let flight: FlightInfo | undefined;
   const parsed = req.flight?.trim() ? parseFlightNumber(req.flight) : null;
-  if (req.flight?.trim() && !parsed) adjustments.push(`“${req.flight}” is not a recognizable flight number (expected e.g. UA 1234) — assessed without it.`);
+  if (req.flight?.trim() && !parsed) adjustments.push(`“${req.flight}” is not a recognizable flight number (expected e.g. UA 1234). Assessed without it.`);
   let flightStats: { key: string; s: Stats; o: string; d: string; dep?: string } | undefined;
   if (parsed) {
     const oSet = metroOf(origin.iata)?.airports ?? [origin.iata];
@@ -83,11 +83,11 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
     if (m?.match) {
       if (m.match.o !== origin.iata) {
         const a = airportByIata(m.match.o);
-        if (a) { adjustments.push(`${parsed.normalized} departs from ${a.iata}, not ${origin.iata} — assessing ${a.iata}.`); origin = a; }
+        if (a) { adjustments.push(`${parsed.normalized} departs from ${a.iata}, not ${origin.iata}. Assessing ${a.iata}.`); origin = a; }
       }
       if (m.match.d !== destination.iata) {
         const a = airportByIata(m.match.d);
-        if (a) { adjustments.push(`${parsed.normalized} lands at ${a.iata}, not ${destination.iata} — assessing ${a.iata}.`); destination = a; }
+        if (a) { adjustments.push(`${parsed.normalized} lands at ${a.iata}, not ${destination.iata}. Assessing ${a.iata}.`); destination = a; }
       }
       if (m.operatedAs !== parsed.normalized) adjustments.push(`${parsed.normalized} reports to BTS as ${m.operatedAs} (regional operator).`);
       flight.scheduledDeparture = btsTime(m.match.crsDep);
@@ -163,7 +163,7 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
     tafs = parseTafs((tafR.value as unknown[]) ?? []);
     const res = [tafRules(book, tafs.find((t) => t.icao === origin.icao), oWin, "origin"), tafRules(book, tafs.find((t) => t.icao === destination.icao), dWin, "destination")];
     const notes = [`${origin.iata}: ${res[0]}`, `${destination.iata}: ${res[1]}`].filter((n) => !n.endsWith("ok"));
-    status("taf", res.includes("ok") ? "ok" : "no-data", notes.length ? `Not covered/missing — ${notes.join(", ")}` : undefined);
+    status("taf", res.includes("ok") ? "ok" : "no-data", notes.length ? `Not covered or missing: ${notes.join(", ")}` : undefined);
   }
 
   // METAR
@@ -205,7 +205,7 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
   const month = +req.date.slice(5, 7);
   const routeMonths = bts.routes[`${origin.iata}-${destination.iata}`] ?? {};
   const routeRes = btsRouteRules(book, routeMonths[String(month)], nationalStats(month), origin.iata, destination.iata, month, btsWindow, Object.keys(routeMonths).map(Number).sort((a, b) => a - b));
-  status("bts-route", routeRes === "ok" ? "ok" : "no-data", `${btsWindow}, bundled${routeRes === "no-route" ? " — no nonstop history for this pair" : routeRes === "no-month" ? " — no history for this month" : ""}`);
+  status("bts-route", routeRes === "ok" ? "ok" : "no-data", `${btsWindow}, bundled${routeRes === "no-route" ? ", no nonstop history for this pair" : routeRes === "no-month" ? ", no history for this month" : ""}`);
 
   // Flight: BTS + adsbdb + aviationstack
   if (!parsed) {
@@ -239,8 +239,8 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
         flight!.matchesRoute = false;
         const elsewhere = [...flight!.btsRoutes.slice(0, 3).map((r) => `${r.o}→${r.d}`), ...(adsb ? [`${adsb.o}→${adsb.d} (adsbdb)`] : [])];
         const id = book.add({ source: flight!.btsRoutes.length ? "bts-flight" : "adsbdb", title: `${parsed.normalized} does not fly ${origin.iata}→${destination.iata}`, detail: `Known routes for this number: ${[...new Set(elsewhere)].join(", ")}.`, url: URLS.bts });
-        book.factor({ level: "MODERATE", side: "flight", evidence: [id], summary: `${parsed.normalized} is not known on ${origin.iata}→${destination.iata} — the booking details may be wrong, or it is a connection.`, action: `Verify the flight number and routing on the booking before relying on this assessment.` });
-      } else adjustments.push(`${parsed.normalized} is unknown to BTS history and adsbdb — new, seasonal, or mistyped. Assessed at airport level.`);
+        book.factor({ level: "MODERATE", side: "flight", evidence: [id], summary: `${parsed.normalized} is not known on ${origin.iata}→${destination.iata}. The booking details may be wrong, or it is a connection.`, action: `Verify the flight number and routing on the booking before relying on this assessment.` });
+      } else adjustments.push(`${parsed.normalized} is unknown to BTS history and adsbdb: new, seasonal, or mistyped. Assessed at airport level.`);
     }
 
     if (!A.aviationstack) status("aviationstack", "not-applicable", notApplicable("the free tier only returns same-day flights."));
@@ -253,7 +253,7 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
         flight!.live = live;
         const level: Level = live.status === "cancelled" ? "SEVERE" : live.status === "diverted" ? "HIGH" : (live.depDelayMin ?? 0) >= 60 ? "HIGH" : (live.depDelayMin ?? 0) >= 30 ? "MODERATE" : "LOW";
         const id = book.add({ source: "aviationstack", title: `${parsed.normalized} live: ${live.status}`, detail: `Departure delay ${live.depDelayMin ?? 0} min.`, url: URLS.aviationstack });
-        if (level !== "LOW") book.factor({ level, side: "flight", evidence: [id], summary: `The airline reports ${parsed.normalized} ${live.status}${live.depDelayMin ? `, ${live.depDelayMin} min late` : ""}.`, action: live.status === "cancelled" ? "Rebook now — the flight is cancelled." : undefined });
+        if (level !== "LOW") book.factor({ level, side: "flight", evidence: [id], summary: `The airline reports ${parsed.normalized} ${live.status}${live.depDelayMin ? `, ${live.depDelayMin} min late` : ""}.`, action: live.status === "cancelled" ? "Rebook now. The flight is cancelled." : undefined });
         status("aviationstack", "ok");
       }
     }
@@ -273,7 +273,7 @@ export async function assess(req: AssessmentRequest, provider: Provider, scenari
       const onTime = hist ? 1 - (hist[0] - hist[2] - hist[3] > 0 ? hist[1] / (hist[0] - hist[2] - hist[3]) : 0) : undefined;
       alternates.push({
         side, airport: alt.iata, name: alt.name, level,
-        reasons: scratch.factors.length ? scratch.factors.map((f) => f.summary) : [faa || t ? "No program or adverse forecast found." : "No live data for this date — history only."],
+        reasons: scratch.factors.length ? scratch.factors.map((f) => f.summary) : [faa || t ? "No program or adverse forecast found." : "No live data for this date. History only."],
         routeOnTime: onTime,
       });
     }

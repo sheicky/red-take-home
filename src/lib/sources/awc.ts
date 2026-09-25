@@ -122,9 +122,9 @@ export function conditionHits(icao: string, c: Omit<TafGroup, "from" | "to" | "c
   const hits: ConditionHit[] = [];
   const wx = c.wx ?? "";
   if (/TS/.test(wx)) hits.push({ level: "HIGH", why: `thunderstorms (${wx})` });
-  if (/FZRA|FZDZ|PL/.test(wx)) hits.push({ level: "HIGH", why: `freezing precipitation (${wx}) — de-icing, reduced rates` });
+  if (/FZRA|FZDZ|PL/.test(wx)) hits.push({ level: "HIGH", why: `freezing precipitation (${wx}): de-icing, reduced rates` });
   else if (/\+SN|BLSN/.test(wx)) hits.push({ level: "HIGH", why: `heavy / blowing snow (${wx})` });
-  else if (/SN/.test(wx)) hits.push({ level: "MODERATE", why: `snow (${wx}) — de-icing delays likely` });
+  else if (/SN/.test(wx)) hits.push({ level: "MODERATE", why: `snow (${wx}): de-icing delays likely` });
   if (c.wgst !== undefined && c.wgst >= 35) hits.push({ level: "HIGH", why: `gusts ${c.wgst} kt` });
   else if (c.wspd !== undefined && c.wspd >= 30) hits.push({ level: "HIGH", why: `sustained wind ${c.wspd} kt` });
   else if ((c.wgst ?? 0) >= 30 || (c.wspd ?? 0) >= 22) hits.push({ level: "MODERATE", why: `wind ${c.wspd ?? "?"} kt gusting ${c.wgst ?? "-"} kt` });
@@ -134,11 +134,11 @@ export function conditionHits(icao: string, c: Omit<TafGroup, "from" | "to" | "c
   const vis = c.visib;
   const ceil = c.ceiling;
   if ((ceil !== undefined && ceil < 500) || (vis !== undefined && vis < 1)) {
-    hits.push({ level: "HIGH", why: `very low ceiling/visibility (${ceil ?? "—"} ft, ${vis ?? "—"} SM) — arrival rates cut` });
+    hits.push({ level: "HIGH", why: `very low ceiling/visibility (${ceil ?? "?"} ft, ${vis ?? "?"} SM), arrival rates cut` });
   } else if ((ceil !== undefined && ceil < 1000) || (vis !== undefined && vis < 3)) {
-    hits.push({ level: "MODERATE", why: `IFR conditions (${ceil ?? "—"} ft, ${vis ?? "—"} SM)` });
+    hits.push({ level: "MODERATE", why: `IFR conditions (${ceil ?? "?"} ft, ${vis ?? "?"} SM)` });
   } else if (ceil !== undefined && LOW_CEILING_SENSITIVE[icao] && ceil < LOW_CEILING_SENSITIVE[icao]) {
-    hits.push({ level: "MODERATE", why: `ceiling ${ceil} ft — below ~${LOW_CEILING_SENSITIVE[icao]} ft this airport loses parallel approaches` });
+    hits.push({ level: "MODERATE", why: `ceiling ${ceil} ft: below ~${LOW_CEILING_SENSITIVE[icao]} ft this airport loses parallel approaches` });
   }
   return hits;
 }
