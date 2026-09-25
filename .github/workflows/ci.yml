@@ -104,4 +104,7 @@ jobs:
           bun run build
           bun run start -p 3000 > server.log 2>&1 &
           for i in $(seq 1 30); do curl -fs http://localhost:3000/ >/dev/null && break; sleep 1; done
-          bun run smoke:ai http://localhost:3000 || { cat server.log; exit 1; }
+          code=0; bun run smoke:ai http://localhost:3000 || code=$?
+          # 3 = the free model's shared quota is used up: says nothing about this code, so a warning.
+          if [ "$code" = 3 ]; then echo "::warning::Free model rate-limited upstream, live AI check inconclusive."; exit 0; fi
+          if [ "$code" != 0 ]; then cat server.log; exit 1; fi
