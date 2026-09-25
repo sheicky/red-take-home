@@ -16,6 +16,8 @@ import { airportByIata } from "./data";
 export interface Scenario {
   id: string;
   label: string;
+  /** What the data switch shows. */
+  short: string;
   description: string;
   synthetic: boolean;
   recordedAt?: string;
@@ -140,7 +142,8 @@ function syntheticProvider(): Provider {
 export const SCENARIOS: Scenario[] = [
   {
     id: "recorded-2026-09-25",
-    label: "Recorded — 25 Sep 2026, New York → San Francisco",
+    label: "Replay of 25 Sep 2026, 16:12 UTC",
+    short: "Replay 25 Sep",
     description: "Real FAA, TAF, METAR and NWS responses captured 16:12–16:20 UTC: ground delay programs at LGA (wind, avg 1 h 54) and SFO (low ceilings), wind advisory over New York.",
     synthetic: false,
     recordedAt: "2026-09-25T16:12:33Z",
@@ -149,7 +152,8 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: "synthetic-blizzard",
-    label: "Synthetic — Chicago blizzard, 14 Jan 2027",
+    label: "Invented Chicago blizzard",
+    short: "Blizzard (invented)",
     description: "INVENTED data to exercise the SEVERE path: ground stop at ORD, ground delay program at MDW, blizzard warning.",
     synthetic: true,
     preset: { origin: "BOS", destination: "ORD", date: "2027-01-14" },

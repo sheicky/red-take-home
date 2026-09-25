@@ -44,7 +44,7 @@ export function AirportField({ label, value, onChange }: { label: string; value:
 
   return (
     <div className="relative">
-      <label htmlFor={id} className="block text-[13px] font-semibold text-[var(--muted)] mb-1">{label}</label>
+      <label htmlFor={id} className="block text-[14px] font-medium mb-1.5 pl-5">{label}</label>
       <input
         id={id}
         role="combobox"
@@ -52,7 +52,7 @@ export function AirportField({ label, value, onChange }: { label: string; value:
         aria-controls={`${id}-list`}
         aria-autocomplete="list"
         autoComplete="off"
-        placeholder="City or airport code"
+        placeholder="City or code"
         value={text}
         onChange={(e) => { typed.current = true; setText(e.target.value); onChange(""); }}
         onFocus={() => hits.length > 0 && typed.current && setOpen(true)}
@@ -64,10 +64,10 @@ export function AirportField({ label, value, onChange }: { label: string; value:
           if (e.key === "Enter") { e.preventDefault(); pick(hits[active]); }
           if (e.key === "Escape") setOpen(false);
         }}
-        className="w-full rounded-md border border-[var(--rule)] bg-[var(--panel)] px-3 py-2 text-[15px]"
+        className="w-full h-12 rounded-full border-[1.5px] border-[var(--noir)] bg-white px-5 text-[16px]"
       />
       {open && hits.length > 0 && (
-        <ul id={`${id}-list`} role="listbox" className="absolute z-20 mt-1 w-full max-h-80 overflow-auto rounded-md border border-[var(--rule)] bg-[var(--panel)] shadow-lg">
+        <ul id={`${id}-list`} role="listbox" className="absolute z-20 mt-2 w-full min-w-[260px] max-h-80 overflow-auto rounded-2xl border-[1.5px] border-[var(--noir)] bg-white py-1">
           {hits.map((h, i) => (
             <li
               key={h.iata}
@@ -75,12 +75,12 @@ export function AirportField({ label, value, onChange }: { label: string; value:
               aria-selected={i === active}
               onMouseDown={(e) => { e.preventDefault(); pick(h); }}
               onMouseEnter={() => setActive(i)}
-              className={`flex gap-3 px-3 py-2 cursor-pointer ${i === active ? "bg-[var(--paper)]" : ""}`}
+              className={`flex gap-3 px-4 py-2 cursor-pointer ${i === active ? "bg-[var(--creme)]" : ""}`}
             >
-              <span className="display text-xl font-semibold w-12 shrink-0 leading-6">{h.iata}</span>
+              <span className="display text-[20px] font-bold w-12 shrink-0 leading-6">{h.iata}</span>
               <span className="min-w-0">
                 <span className="block truncate">{h.name}</span>
-                <span className="block text-[13px] text-[var(--muted)] truncate">{h.city}, {h.state}{h.metro ? ` — ${h.metro}` : ""}</span>
+                <span className="block text-[13px] text-[var(--gris)] truncate">{h.city}, {h.state}</span>
               </span>
             </li>
           ))}
