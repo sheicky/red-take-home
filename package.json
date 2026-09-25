@@ -11,6 +11,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "smoke:ai": "bun scripts/smoke-ai.ts",
     "diagram": "bun scripts/diagram.ts",
+    "screenshots": "bun scripts/screenshots.ts",
     "data": "python3 scripts/build_bts.py && python3 scripts/build_airports.py"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "playwright-core": "^1.63.0",
     "roughjs": "4.6.6",
     "tailwindcss": "^4",
     "typescript": "^5",

@@ -6,6 +6,32 @@ It's built for an Operations team that looks after employees on the road. You ge
 
 Every number comes from live public data. Nothing is made up and nothing is paid for.
 
+## What it looks like
+
+Type a city or a code. A city lists every airport around it.
+
+![Search: typing Chicago lists O'Hare, Midway and Rockford](docs/screenshots/1-search.png)
+
+Boston to Los Angeles, the next day. The line between the two airports takes each side's color. Every problem sits under its airport, with the number that matters, its source and what it does to a flight. The nearby airports are there if the traveler can switch.
+
+![A high-risk trip: gusts of 52 mph in Boston, low cloud and fog in Los Angeles, four nearby airports](docs/screenshots/2-high-risk.png)
+
+What the Ops agent should do, most urgent first. It works as a checklist.
+
+![The checklist, with the first step ticked](docs/screenshots/3-checklist.png)
+
+Every fact is linked to its source, and the page also lists what it looked at but didn't count, with the reason.
+
+![The evidence: raw airport forecasts, weather service periods and a warning, and the route's on-time history](docs/screenshots/4-evidence.png)
+
+A quiet trip looks quiet.
+
+![Chicago to Denver: low risk, nothing reported](docs/screenshots/5-low-risk.png)
+
+<img src="docs/screenshots/6-mobile.png" alt="The same Boston to Los Angeles check on a phone" width="300">
+
+The pictures come from live data on 25 September 2026. `bun run screenshots` takes them again against a running server.
+
 ## How it decides
 
 Plain rules set the risk level, not the AI. They read these public sources and keep the worst problem they find:
@@ -43,7 +69,7 @@ A check goes like this:
 4. The model receives the rules' output, never the raw feeds, and writes the traveler message. The checker rejects any draft that breaks the rules, with one retry.
 5. The chat sends the same assessment plus the question, and the answer streams back.
 
-Delivery follows the same idea: every push to `main` runs the checks in GitHub Actions, builds the Docker image and publishes it to the GitHub Container Registry.
+On every push to `main`, GitHub Actions runs the checks, builds the Docker image and publishes it to the GitHub Container Registry.
 
 ## Run it
 
@@ -95,7 +121,7 @@ bun run lint
 bun run typecheck
 ```
 
-GitHub Actions runs lint, types, tests and a production build on every push. Then it builds the Docker image, starts it and checks the home page and the API. When the `OPENROUTER_API_KEY` secret is set, one more job asks the real model for a message and a chat answer.
+GitHub Actions runs lint, types, tests and a production build on every push. Then it builds the Docker image, starts it and checks the home page and the API. When the `OPENROUTER_API_KEY` secret is set, one more job asks the real model for a message and a chat answer. If the free quota is used up, that job leaves a warning instead of failing the build, since the code isn't at fault.
 
 ## Tech stack
 
@@ -112,5 +138,5 @@ src/app            the page and the API routes (/api/assess, /api/chat, /api/air
 src/lib            sources, rules, the assessment, and the AI in src/lib/ai
 src/components     the result page
 data               airports and on-time history, built by scripts/
-docs               the system design drawing
+docs               the system design drawing and the screenshots
 ```
