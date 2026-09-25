@@ -25,9 +25,9 @@ async function Assessed({ req }: { req: AssessmentRequest }) {
     <Result
       a={a}
       briefing={aiOn
-        ? <Suspense fallback={<BriefingSkeleton />}><Briefed a={a} /></Suspense>
-        : <p className="text-[14px] text-[var(--gris)]">The message and the chat are off: OPENAI_API_KEY is not set on the server.</p>}
-      chat={aiOn ? <Chat trip={{ from: a.request.origin, to: a.request.destination, date: a.request.date }} known={known} /> : null}
+        ? <Suspense key="briefing" fallback={<BriefingSkeleton />}><Briefed a={a} /></Suspense>
+        : <p key="briefing-off" className="text-[14px] text-[var(--gris)]">The message and the chat are off: OPENAI_API_KEY is not set on the server.</p>}
+      chat={aiOn ? <Chat key="chat" trip={{ from: a.request.origin, to: a.request.destination, date: a.request.date }} known={known} /> : null}
     />
   );
 }
