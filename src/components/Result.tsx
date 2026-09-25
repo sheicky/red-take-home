@@ -62,7 +62,7 @@ function Strip({ a }: { a: Assessment }) {
     <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-4 sm:gap-8">
       {side(a.origin.iata, a.origin.name, worst(a.factors.filter((f) => f.side === "origin")), sched && a.flight?.scheduledDeparture ? `Dep ${a.flight.scheduledDeparture}` : undefined)}
       <div className="pt-6 sm:pt-10 text-center text-[14px] leading-tight">
-        <div className="font-semibold">{new Date(a.request.date + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}</div>
+        <div className="font-semibold">{new Date(a.request.date + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).replace("Sept", "Sep")}</div>
         <div className="text-[var(--gris)]">{a.horizon.daysAhead === 0 ? "today" : a.horizon.daysAhead === 1 ? "tomorrow" : `in ${a.horizon.daysAhead} days`}</div>
         {a.flight && <div className="mt-1 font-semibold">{a.flight.normalized}</div>}
       </div>
