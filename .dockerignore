@@ -1,12 +1,11 @@
-node_modules
-.next
-.git
-.github
-.claude
-.env*
-coverage
-fixtures
-scripts/__pycache__
-*.tsbuildinfo
-Dockerfile
-.dockerignore
+# Allowlist: only what the build needs enters the image context. Everything else stays out,
+# including any .env file, so a key can never be baked into an image.
+*
+!src
+!public
+!data
+!package.json
+!bun.lock
+!next.config.ts
+!tsconfig.json
+!postcss.config.mjs

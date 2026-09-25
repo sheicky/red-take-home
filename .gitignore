@@ -42,5 +42,3 @@ next-env.d.ts
 !.env.example
 
 __pycache__/
-.gstack/
-.impeccable/
